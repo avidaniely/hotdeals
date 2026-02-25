@@ -1,7 +1,6 @@
 {
   "name": "hotdeals-server",
   "version": "1.0.0",
-  "description": "HOTדילים - Express + MySQL API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
