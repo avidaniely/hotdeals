@@ -8,10 +8,19 @@ const cors     = require('cors');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const mysql    = require('mysql2/promise');
+const passport = require('passport');
+const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
+const multer   = require('multer');
+const path     = require('path');
+const fs       = require('fs');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'hotdeals_secret_change_in_production';
+const JWT_SECRET       = process.env.JWT_SECRET       || 'hotdeals_secret_change_in_production';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const FRONTEND_URL     = process.env.FRONTEND_URL     || 'http://localhost:5173';
+const BACKEND_URL      = process.env.BACKEND_URL      || 'http://localhost:5000';
 
 // ── Middleware ───────────────────────────────────────────────
 app.use(cors({
@@ -25,6 +34,30 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// ── Serve uploaded avatars ───────────────────────────────────
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ── Multer setup (avatar uploads, max 2 MB, images only) ────
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, 'uploads', 'avatars');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const upload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) =>
+    file.mimetype.startsWith('image/')
+      ? cb(null, true)
+      : cb(new Error('Only image files are allowed')),
+});
+
 // ── DB Pool ──────────────────────────────────────────────────
 const db = mysql.createPool({
   host:     process.env.DB_HOST     || 'localhost',
@@ -35,6 +68,36 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
 });
+
+// ── Auto-migrations (safe to run on every start) ─────────────
+async function runMigrations() {
+  try {
+    await db.execute(`ALTER TABLE users MODIFY COLUMN avatar VARCHAR(500) NOT NULL DEFAULT '🙂'`);
+  } catch (e) { /* already migrated or not needed */ }
+  try {
+    await db.execute(`ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NOT NULL DEFAULT ''`);
+  } catch (e) {}
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN google_id VARCHAR(100) NULL`);
+  } catch (e) {}
+  try {
+    await db.execute(`ALTER TABLE users ADD UNIQUE KEY uq_google (google_id)`);
+  } catch (e) {}
+}
+runMigrations();
+
+// ── Google Passport Strategy ─────────────────────────────────
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy(
+    {
+      clientID: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      callbackURL: `${BACKEND_URL}/api/auth/google/callback`,
+    },
+    (accessToken, refreshToken, profile, done) => done(null, profile)
+  ));
+  app.use(passport.initialize());
+}
 
 // ── Auth Middleware ──────────────────────────────────────────
 const auth = async (req, res, next) => {
@@ -77,15 +140,18 @@ const DEAL_GROUP = `GROUP BY d.id`;
 //  AUTH ROUTES
 // ════════════════════════════════════════════════════════════
 
+const AVATARS = ['🐱','🦊','🐸','🦋','🐧','🦁','🐨','🦄','🐙','🦅'];
+
 // POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, avatar: chosenAvatar } = req.body;
   if (!username || !email || !password)
     return res.status(400).json({ error: 'כל השדות חובה' });
   try {
-    const hash = await bcrypt.hash(password, 10);
-    const avatars = ['🐱','🦊','🐸','🦋','🐧','🦁','🐨','🦄','🐙','🦅'];
-    const avatar  = avatars[Math.floor(Math.random() * avatars.length)];
+    const hash   = await bcrypt.hash(password, 10);
+    const avatar = (chosenAvatar && AVATARS.includes(chosenAvatar))
+      ? chosenAvatar
+      : AVATARS[Math.floor(Math.random() * AVATARS.length)];
     const [result] = await db.execute(
       'INSERT INTO users (username, email, password, avatar) VALUES (?, ?, ?, ?)',
       [username, email, hash, avatar]
@@ -96,7 +162,11 @@ app.post('/api/auth/register', async (req, res) => {
     );
     res.json({ token, user: { id: result.insertId, username, email, avatar, role: 'user' } });
   } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'שם משתמש או אימייל כבר קיים' });
+    if (e.code === 'ER_DUP_ENTRY') {
+      // Distinguish username vs email collision
+      const msg = e.message.includes('username') ? 'שם המשתמש כבר תפוס' : 'האימייל כבר רשום';
+      return res.status(409).json({ error: msg });
+    }
     console.error(e);
     res.status(500).json({ error: 'שגיאת שרת' });
   }
@@ -111,6 +181,7 @@ app.post('/api/auth/login', async (req, res) => {
     );
     if (!user) return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
     if (user.is_banned) return res.status(403).json({ error: 'החשבון שלך חסום' });
+    if (!user.password) return res.status(401).json({ error: 'חשבון זה נרשם דרך Google — השתמש בכניסה עם Google' });
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
     const token = jwt.sign(
@@ -134,6 +205,128 @@ app.get('/api/auth/me', auth, async (req, res) => {
     [req.user.id]
   );
   res.json(user);
+});
+
+// ── Google OAuth ─────────────────────────────────────────────
+
+// GET /api/auth/google  — start OAuth flow
+app.get('/api/auth/google', (req, res, next) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.redirect(`${FRONTEND_URL}?auth_error=Google+OAuth+not+configured`);
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
+});
+
+// GET /api/auth/google/callback  — handle Google redirect
+app.get('/api/auth/google/callback',
+  (req, res, next) => {
+    passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}?auth_error=true` })(req, res, next);
+  },
+  async (req, res) => {
+    try {
+      const profile     = req.user;
+      const googleId    = profile.id;
+      const email       = profile.emails?.[0]?.value || '';
+      const googleAvatar = profile.photos?.[0]?.value || '';
+
+      // Check if user exists by google_id
+      const [[existing]] = await db.execute(
+        'SELECT * FROM users WHERE google_id = ?', [googleId]
+      );
+
+      if (existing) {
+        // Existing Google user — issue JWT
+        const token = jwt.sign(
+          { id: existing.id, username: existing.username, avatar: existing.avatar, role: existing.role },
+          JWT_SECRET, { expiresIn: '30d' }
+        );
+        return res.redirect(`${FRONTEND_URL}?token=${encodeURIComponent(token)}`);
+      }
+
+      // New Google user — issue pending token so frontend can ask for username
+      const pendingToken = jwt.sign(
+        { pending: true, google_id: googleId, email, google_avatar: googleAvatar },
+        JWT_SECRET, { expiresIn: '10m' }
+      );
+      res.redirect(`${FRONTEND_URL}?google_pending=${encodeURIComponent(pendingToken)}`);
+    } catch (e) {
+      console.error(e);
+      res.redirect(`${FRONTEND_URL}?auth_error=true`);
+    }
+  }
+);
+
+// POST /api/auth/google/complete  — finalise new Google user with chosen username
+app.post('/api/auth/google/complete', async (req, res) => {
+  const { pendingToken, username } = req.body;
+  if (!pendingToken || !username)
+    return res.status(400).json({ error: 'נתונים חסרים' });
+  try {
+    const payload = jwt.verify(pendingToken, JWT_SECRET);
+    if (!payload.pending) return res.status(400).json({ error: 'טוקן לא תקין' });
+
+    // Username uniqueness check
+    const [[taken]] = await db.execute('SELECT id FROM users WHERE username = ?', [username]);
+    if (taken) return res.status(409).json({ error: 'שם המשתמש כבר תפוס' });
+
+    const avatar = payload.google_avatar || AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    const [result] = await db.execute(
+      'INSERT INTO users (username, email, password, avatar, google_id) VALUES (?, ?, ?, ?, ?)',
+      [username, payload.email, '', avatar, payload.google_id]
+    );
+    const token = jwt.sign(
+      { id: result.insertId, username, avatar, role: 'user' },
+      JWT_SECRET, { expiresIn: '30d' }
+    );
+    res.json({ token, user: { id: result.insertId, username, email: payload.email, avatar, role: 'user' } });
+  } catch (e) {
+    if (e.name === 'TokenExpiredError') return res.status(400).json({ error: 'הטוקן פג תוקף, נסה שוב' });
+    if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'שם המשתמש כבר תפוס' });
+    console.error(e);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  USER ROUTES (avatar update)
+// ════════════════════════════════════════════════════════════
+
+// POST /api/users/avatar  — upload a photo avatar
+app.post('/api/users/avatar', auth, upload.single('avatar'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'לא נבחר קובץ' });
+
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+  // Delete previous file-based avatar if it exists
+  try {
+    const [[user]] = await db.execute('SELECT avatar FROM users WHERE id = ?', [req.user.id]);
+    if (user && user.avatar.startsWith('/uploads/')) {
+      const oldPath = path.join(__dirname, user.avatar);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+  } catch (_) {}
+
+  await db.execute('UPDATE users SET avatar = ? WHERE id = ?', [avatarUrl, req.user.id]);
+  res.json({ avatar: avatarUrl });
+});
+
+// PATCH /api/users/me  — update emoji avatar
+app.patch('/api/users/me', auth, async (req, res) => {
+  const { avatar } = req.body;
+  if (!avatar || !AVATARS.includes(avatar))
+    return res.status(400).json({ error: 'אווטאר לא תקין' });
+
+  // Delete old file-based avatar if switching to emoji
+  try {
+    const [[user]] = await db.execute('SELECT avatar FROM users WHERE id = ?', [req.user.id]);
+    if (user && user.avatar.startsWith('/uploads/')) {
+      const oldPath = path.join(__dirname, user.avatar);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+  } catch (_) {}
+
+  await db.execute('UPDATE users SET avatar = ? WHERE id = ?', [avatar, req.user.id]);
+  res.json({ avatar });
 });
 
 // ════════════════════════════════════════════════════════════

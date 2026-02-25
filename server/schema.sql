@@ -11,11 +11,13 @@ CREATE TABLE users (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   username    VARCHAR(50)  NOT NULL UNIQUE,
   email       VARCHAR(120) NOT NULL UNIQUE,
-  password    VARCHAR(255) NOT NULL,          -- bcrypt hash
-  avatar      VARCHAR(10)  NOT NULL DEFAULT '🙂',
+  password    VARCHAR(255) NOT NULL DEFAULT '', -- bcrypt hash (empty for Google-only accounts)
+  avatar      VARCHAR(500) NOT NULL DEFAULT '🙂',
   role        ENUM('user','admin') NOT NULL DEFAULT 'user',
   is_banned   TINYINT(1)   NOT NULL DEFAULT 0,
-  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+  google_id   VARCHAR(100) NULL,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_google (google_id)
 ) ENGINE=InnoDB;
 
 -- ── Categories ───────────────────────────────────────────────
