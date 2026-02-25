@@ -1,5 +1,5 @@
 // ============================================================
-//  App.jsx  –  HOTדילים  (connected to MySQL backend)
+//  App.jsx  –  Hot IL Deals  (connected to MySQL backend)
 //  Place in:  client/src/App.jsx
 // ============================================================
 import { useState, useEffect, useCallback } from "react";
@@ -14,7 +14,7 @@ const AVATARS = ['🐱','🦊','🐸','🦋','🐧','🦁','🐨','🦄','🐙',
 const getTemp = (hot, cold) => {
   const s = hot - cold;
   if (s > 150) return { label: "🔥 לוהט",    color: "#ff2d2d", bg: "#fff0f0" };
-  if (s > 80)  return { label: "🔥 חם מאוד", color: "#ff6b00", bg: "#fff5f0" };
+  if (s > 80)  return { label: "🔥 חם מאוד", color: "#1a73e8", bg: "#f0f5ff" };
   if (s > 30)  return { label: "♨️ חם",       color: "#ff9500", bg: "#fffbf0" };
   if (s > 0)   return { label: "🌤 פושר",     color: "#ffcc00", bg: "#fffdf0" };
   return              { label: "🧊 קר",        color: "#4db6ff", bg: "#f0f8ff" };
@@ -173,16 +173,16 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        :root{--orange:#ff6b00;--red:#e83030;--blue:#1a73e8;--ice:#4db6ff;--dark:#1a1a2e;--mid:#444466;--border:#e2e4ea;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.14)}
+        :root{--orange:#1a73e8;--red:#e83030;--blue:#1a73e8;--ice:#4db6ff;--dark:#1a1a2e;--mid:#444466;--border:#e2e4ea;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.14)}
         button{cursor:pointer;font-family:inherit} input,textarea,select{font-family:inherit}
         .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weight:700;transition:all .2s}
-        .btn-primary{background:var(--orange);color:#fff} .btn-primary:hover{background:#ff8c38;transform:translateY(-1px);box-shadow:0 4px 12px rgba(255,107,0,.35)}
+        .btn-primary{background:var(--orange);color:#fff} .btn-primary:hover{background:#1558b0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,115,232,.35)}
         .btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)} .btn-ghost:hover{background:#f0f0f4}
         .btn-danger{background:#e83030;color:#fff} .btn-danger:hover{background:#c02020}
         .btn-success{background:#1aaa55;color:#fff}
         .btn-outline{background:transparent;border:2px solid var(--orange);color:var(--orange)} .btn-outline:hover{background:var(--orange);color:#fff}
         input[type=text],input[type=email],input[type=password],input[type=number],input[type=url],textarea,select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:#fafafa;transition:.2s;direction:rtl;color:var(--dark)}
-        input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px rgba(255,107,0,.12)}
+        input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px rgba(26,115,232,.12)}
         label{display:block;font-size:13px;font-weight:700;margin-bottom:5px;color:var(--mid)}
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
         .modal-box{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .25s ease}
@@ -191,11 +191,11 @@ export default function App() {
         @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         .vote-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:2px solid;border-radius:12px;font-weight:800;font-size:13px;transition:.2s;background:#fff}
         .vote-btn:hover{transform:scale(1.05)}
-        .vote-hot{border-color:#ff6b00;color:#ff6b00} .vote-hot.active{background:#ff6b00;color:#fff}
+        .vote-hot{border-color:#1a73e8;color:#1a73e8} .vote-hot.active{background:#1a73e8;color:#fff}
         .vote-cold{border-color:#4db6ff;color:#4db6ff} .vote-cold.active{background:#4db6ff;color:#fff}
         .deal-card{background:#fff;border-radius:16px;border:1px solid var(--border);transition:.2s;overflow:hidden}
         .deal-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.12);transform:translateY(-2px)}
-        .deal-card.featured{border:2px solid #ff6b00} .deal-card.expired{opacity:.6}
+        .deal-card.featured{border:2px solid #1a73e8} .deal-card.expired{opacity:.6}
         .badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
         ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#f1f1f1} ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
         @media(max-width:768px){.desktop-only{display:none!important}.main-grid{grid-template-columns:1fr!important}.sidebar{display:none}}
@@ -208,7 +208,7 @@ export default function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ fontSize: 28 }}>🔥</div>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>HOT<span style={{ color: "var(--orange)" }}>דילים</span></div>
+                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>Hot <span style={{ color: "var(--orange)" }}>IL Deals</span></div>
                 <div style={{ fontSize: 11, color: "#aaa" }}>קהילת הדילים הטובה בישראל</div>
               </div>
             </div>
@@ -346,13 +346,13 @@ export default function App() {
                     <div style={{ fontSize:13,fontWeight:600,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180 }}>{d.title}</div>
                     <div style={{ fontSize:12,color:"var(--orange)",fontWeight:800 }}>₪{(+d.deal_price).toLocaleString()}</div>
                   </div>
-                  <div style={{ fontSize:11,fontWeight:700,color:"#ff6b00" }}>🔥{d.hot-d.cold}</div>
+                  <div style={{ fontSize:11,fontWeight:700,color:"#1a73e8" }}>🔥{d.hot-d.cold}</div>
                 </div>
               ))}
             </div>
 
             {!user && (
-              <div style={{ background: "linear-gradient(135deg,#ff6b00,#ff2d2d)", borderRadius: 16, padding: 20, color: "#fff", textAlign: "center" }}>
+              <div style={{ background: "linear-gradient(135deg,#1a73e8,#1565c0)", borderRadius: 16, padding: 20, color: "#fff", textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🔥</div>
                 <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 8 }}>הצטרף לקהילה!</div>
                 <div style={{ fontSize: 13, marginBottom: 16, opacity: 0.9 }}>שתף דילים, הצבע, וחסוך כסף</div>
@@ -484,7 +484,7 @@ function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
             <span>🔥 חם ({deal.hot})</span><span>🧊 קר ({deal.cold})</span>
           </div>
           <div style={{ height:6,borderRadius:3,background:"#eee",overflow:"hidden" }}>
-            <div style={{ height:"100%",borderRadius:3,transition:".5s",width:`${Math.round(+deal.hot/Math.max(+deal.hot+ +deal.cold,1)*100)}%`,background:"linear-gradient(to right,#ff6b00,#ff2d2d)" }} />
+            <div style={{ height:"100%",borderRadius:3,transition:".5s",width:`${Math.round(+deal.hot/Math.max(+deal.hot+ +deal.cold,1)*100)}%`,background:"linear-gradient(to right,#1a73e8,#1565c0)" }} />
           </div>
         </div>
         {/* Comments */}
