@@ -149,10 +149,10 @@ app.get('/api/categories', async (req, res) => {
 //  DEALS
 // ════════════════════════════════════════════════════════════
 
-// GET /api/deals  ?category=X&sort=hot|new&search=Y&page=1
+// GET /api/deals  ?category=X&sort=hot|new&search=Y&page=1&min_score=N
 app.get('/api/deals', async (req, res) => {
   try {
-    const { category, sort = 'hot', search, page = 1 } = req.query;
+    const { category, sort = 'hot', search, page = 1, min_score } = req.query;
     const limit  = 20;
     const offset = (page - 1) * limit;
     const params = [];
@@ -167,18 +167,21 @@ app.get('/api/deals', async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
+    const minScore = min_score ? Math.max(0, parseInt(min_score, 10) || 0) : null;
+    const having   = minScore !== null ? `HAVING (hot - cold) >= ${minScore}` : '';
+
     const orderBy = sort === 'hot'
       ? 'ORDER BY (hot - cold) DESC, d.created_at DESC'
       : 'ORDER BY d.created_at DESC';
 
     const [rows] = await db.execute(
-      `${DEAL_SELECT} ${where} ${DEAL_GROUP} ${orderBy} LIMIT ${limit} OFFSET ${offset}`,
+      `${DEAL_SELECT} ${where} ${DEAL_GROUP} ${having} ${orderBy} LIMIT ${limit} OFFSET ${offset}`,
       params
     );
-    const [[{ total }]] = await db.execute(
-      `SELECT COUNT(DISTINCT d.id) AS total FROM deals d JOIN categories c ON d.category_id = c.id ${where}`,
-      params
-    );
+    const countSQL = having
+      ? `SELECT COUNT(*) AS total FROM (${DEAL_SELECT} ${where} ${DEAL_GROUP} ${having}) AS sub`
+      : `SELECT COUNT(DISTINCT d.id) AS total FROM deals d JOIN categories c ON d.category_id = c.id ${where}`;
+    const [[{ total }]] = await db.execute(countSQL, params);
     res.json({ deals: rows, total, page: +page, pages: Math.ceil(total / limit) });
   } catch (e) {
     console.error(e);

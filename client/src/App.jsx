@@ -66,7 +66,8 @@ export default function App() {
   const fetchDeals = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { sort: activeTab === "hot" ? "hot" : "new", page };
+      const params = { sort: activeTab === "new" ? "new" : "hot", page };
+      if (activeTab === "warm") params.min_score = 50;
       if (activeCategory !== "הכל") params.category = activeCategory;
       if (search) params.search = search;
       const data = await dealsAPI.list(params);
@@ -203,7 +204,7 @@ export default function App() {
 
       {/* HEADER */}
       <header style={{ background: "#1a1a2e", color: "#fff", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,0,0,.3)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto", padding: "0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, height: 64, justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ fontSize: 28 }}>🔥</div>
@@ -213,7 +214,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ flex: 1, maxWidth: 420, position: "relative" }} className="desktop-only">
+            <div style={{ flex: 1, maxWidth: 700, position: "relative" }} className="desktop-only">
               <input
                 placeholder="🔍  חפש דילים..."
                 value={search}
@@ -266,13 +267,13 @@ export default function App() {
       </header>
 
       {/* MAIN */}
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 20px" }}>
+      <main style={{ maxWidth: 1600, margin: "0 auto", padding: "24px 20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }} className="main-grid">
           {/* Feed */}
           <div>
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, background: "#fff", borderRadius: 12, padding: 4, marginBottom: 20, boxShadow: "var(--shadow)", border: "1px solid var(--border)", width: "fit-content" }}>
-              {[["hot","🔥 הכי חמים"],["new","🆕 חדשים"]].map(([id, label]) => (
+              {[["hot","🔥 הכי חמים"],["warm","♨️ חמים"],["new","🆕 חדשים"]].map(([id, label]) => (
                 <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
                   style={{ border: "none", borderRadius: 10, padding: "8px 18px", fontWeight: 700, fontSize: 14,
                     background: activeTab === id ? "var(--orange)" : "transparent",
