@@ -32,11 +32,34 @@ async function api(path, options = {}) {
 //  Auth
 // ════════════════════════════════════════════════════════════
 export const authAPI = {
-  register: (username, email, password) =>
-    api('/auth/register', { method: 'POST', body: { username, email, password } }),
+  register: (username, email, password, avatar) =>
+    api('/auth/register', { method: 'POST', body: { username, email, password, avatar } }),
   login: (username, password) =>
     api('/auth/login', { method: 'POST', body: { username, password } }),
   me: () => api('/auth/me'),
+  googleComplete: (pendingToken, username) =>
+    api('/auth/google/complete', { method: 'POST', body: { pendingToken, username } }),
+};
+
+// ════════════════════════════════════════════════════════════
+//  User
+// ════════════════════════════════════════════════════════════
+export const userAPI = {
+  updateAvatarPhoto: (file) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    return fetch(`${BASE}/users/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: form,
+    }).then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'שגיאה בהעלאת התמונה');
+      return data;
+    });
+  },
+  updateAvatarEmoji: (avatar) =>
+    api('/users/me', { method: 'PATCH', body: { avatar } }),
 };
 
 // ════════════════════════════════════════════════════════════

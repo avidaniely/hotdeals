@@ -1,20 +1,35 @@
 // ============================================================
-//  App.jsx  –  HOTדילים  (connected to MySQL backend)
+//  App.jsx  –  Hot IL Deals  (connected to MySQL backend)
 //  Place in:  client/src/App.jsx
 // ============================================================
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  authAPI, dealsAPI, commentsAPI, categoriesAPI, adminAPI,
+  authAPI, dealsAPI, commentsAPI, categoriesAPI, adminAPI, userAPI,
   saveToken, clearToken, getToken,
 } from "./api";
 
 const AVATARS = ['🐱','🦊','🐸','🦋','🐧','🦁','🐨','🦄','🐙','🦅'];
 
+// ── Avatar: renders emoji or photo URL ───────────────────────
+function Avatar({ avatar, size = 22, style: extraStyle = {} }) {
+  if (!avatar) return <span style={{ fontSize: size, ...extraStyle }}>🙂</span>;
+  if (avatar.startsWith('/') || avatar.startsWith('http')) {
+    return (
+      <img
+        src={avatar}
+        alt="avatar"
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, ...extraStyle }}
+      />
+    );
+  }
+  return <span style={{ fontSize: size, flexShrink: 0, ...extraStyle }}>{avatar}</span>;
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 const getTemp = (hot, cold) => {
   const s = hot - cold;
   if (s > 150) return { label: "🔥 לוהט",    color: "#ff2d2d", bg: "#fff0f0" };
-  if (s > 80)  return { label: "🔥 חם מאוד", color: "#ff6b00", bg: "#fff5f0" };
+  if (s > 80)  return { label: "🔥 חם מאוד", color: "#1a73e8", bg: "#f0f5ff" };
   if (s > 30)  return { label: "♨️ חם",       color: "#ff9500", bg: "#fffbf0" };
   if (s > 0)   return { label: "🌤 פושר",     color: "#ffcc00", bg: "#fffdf0" };
   return              { label: "🧊 קר",        color: "#4db6ff", bg: "#f0f8ff" };
@@ -30,18 +45,19 @@ const timeAgo = (d) => {
 
 // ════════════════════════════════════════════════════════════
 export default function App() {
-  const [user,          setUser]          = useState(null);
-  const [deals,         setDeals]         = useState([]);
-  const [categories,    setCategories]    = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [modal,         setModal]         = useState(null);
-  const [selectedDeal,  setSelectedDeal]  = useState(null);
-  const [activeTab,     setActiveTab]     = useState("hot");
-  const [activeCategory,setActiveCategory]= useState("הכל");
-  const [search,        setSearch]        = useState("");
-  const [toast,         setToast]         = useState(null);
-  const [page,          setPage]          = useState(1);
-  const [totalPages,    setTotalPages]    = useState(1);
+  const [user,              setUser]              = useState(null);
+  const [deals,             setDeals]             = useState([]);
+  const [categories,        setCategories]        = useState([]);
+  const [loading,           setLoading]           = useState(true);
+  const [modal,             setModal]             = useState(null);
+  const [selectedDeal,      setSelectedDeal]      = useState(null);
+  const [activeTab,         setActiveTab]         = useState("hot");
+  const [activeCategory,    setActiveCategory]    = useState("הכל");
+  const [search,            setSearch]            = useState("");
+  const [toast,             setToast]             = useState(null);
+  const [page,              setPage]              = useState(1);
+  const [totalPages,        setTotalPages]        = useState(1);
+  const [googlePendingToken,setGooglePendingToken]= useState(null);
 
   // Admin state
   const [adminTab,      setAdminTab]      = useState("deals");
@@ -54,10 +70,28 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ── Load categories + restore session ─────────────────────
+  // ── Load categories + restore session + Google OAuth ──────
   useEffect(() => {
     categoriesAPI.list().then(cats => setCategories(cats)).catch(() => {});
-    if (getToken()) {
+
+    // Handle Google OAuth redirects
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromGoogle = params.get('token');
+    const pendingFromGoogle = params.get('google_pending');
+    const authError = params.get('auth_error');
+
+    if (tokenFromGoogle) {
+      saveToken(tokenFromGoogle);
+      authAPI.me().then(u => { setUser(u); showToast(`ברוך הבא, ${u.username}! 🎉`); }).catch(() => clearToken());
+      window.history.replaceState({}, '', '/');
+    } else if (pendingFromGoogle) {
+      setGooglePendingToken(pendingFromGoogle);
+      setModal('google_username');
+      window.history.replaceState({}, '', '/');
+    } else if (authError) {
+      showToast('הכניסה דרך Google נכשלה', 'error');
+      window.history.replaceState({}, '', '/');
+    } else if (getToken()) {
       authAPI.me().then(u => setUser(u)).catch(() => clearToken());
     }
   }, []);
@@ -66,7 +100,8 @@ export default function App() {
   const fetchDeals = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { sort: activeTab === "hot" ? "hot" : "new", page };
+      const params = { sort: activeTab === "new" ? "new" : "hot", page };
+      if (activeTab === "warm") params.min_score = 50;
       if (activeCategory !== "הכל") params.category = activeCategory;
       if (search) params.search = search;
       const data = await dealsAPI.list(params);
@@ -92,14 +127,40 @@ export default function App() {
     } catch (e) { showToast(e.message, "error"); }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, avatar) => {
     try {
-      const { token, user: u } = await authAPI.register(username, email, password);
+      const { token, user: u } = await authAPI.register(username, email, password, avatar);
       saveToken(token);
       setUser(u);
       setModal(null);
       showToast(`ברוך הבא לקהילה, ${u.username}! 🎊`);
     } catch (e) { showToast(e.message, "error"); }
+  };
+
+  const googleComplete = async (username) => {
+    try {
+      const { token, user: u } = await authAPI.googleComplete(googlePendingToken, username);
+      saveToken(token);
+      setUser(u);
+      setModal(null);
+      showToast(`ברוך הבא לקהילה, ${u.username}! 🎊`);
+    } catch (e) { showToast(e.message, "error"); }
+  };
+
+  const updateAvatarPhoto = async (file) => {
+    try {
+      const data = await userAPI.updateAvatarPhoto(file);
+      setUser(prev => ({ ...prev, avatar: data.avatar }));
+      showToast('האווטאר עודכן!');
+    } catch (e) { showToast(e.message, 'error'); }
+  };
+
+  const updateAvatarEmoji = async (emoji) => {
+    try {
+      const data = await userAPI.updateAvatarEmoji(emoji);
+      setUser(prev => ({ ...prev, avatar: data.avatar }));
+      showToast('האווטאר עודכן!');
+    } catch (e) { showToast(e.message, 'error'); }
   };
 
   const logout = () => { clearToken(); setUser(null); showToast("להתראות! 👋"); };
@@ -173,16 +234,16 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        :root{--orange:#ff6b00;--red:#e83030;--blue:#1a73e8;--ice:#4db6ff;--dark:#1a1a2e;--mid:#444466;--border:#e2e4ea;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.14)}
+        :root{--orange:#1a73e8;--red:#e83030;--blue:#1a73e8;--ice:#4db6ff;--dark:#1a1a2e;--mid:#444466;--border:#e2e4ea;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.14)}
         button{cursor:pointer;font-family:inherit} input,textarea,select{font-family:inherit}
         .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weight:700;transition:all .2s}
-        .btn-primary{background:var(--orange);color:#fff} .btn-primary:hover{background:#ff8c38;transform:translateY(-1px);box-shadow:0 4px 12px rgba(255,107,0,.35)}
+        .btn-primary{background:var(--orange);color:#fff} .btn-primary:hover{background:#1558b0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,115,232,.35)}
         .btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)} .btn-ghost:hover{background:#f0f0f4}
         .btn-danger{background:#e83030;color:#fff} .btn-danger:hover{background:#c02020}
         .btn-success{background:#1aaa55;color:#fff}
         .btn-outline{background:transparent;border:2px solid var(--orange);color:var(--orange)} .btn-outline:hover{background:var(--orange);color:#fff}
         input[type=text],input[type=email],input[type=password],input[type=number],input[type=url],textarea,select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:#fafafa;transition:.2s;direction:rtl;color:var(--dark)}
-        input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px rgba(255,107,0,.12)}
+        input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px rgba(26,115,232,.12)}
         label{display:block;font-size:13px;font-weight:700;margin-bottom:5px;color:var(--mid)}
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
         .modal-box{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .25s ease}
@@ -191,11 +252,11 @@ export default function App() {
         @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         .vote-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 14px;border:2px solid;border-radius:12px;font-weight:800;font-size:13px;transition:.2s;background:#fff}
         .vote-btn:hover{transform:scale(1.05)}
-        .vote-hot{border-color:#ff6b00;color:#ff6b00} .vote-hot.active{background:#ff6b00;color:#fff}
+        .vote-hot{border-color:#1a73e8;color:#1a73e8} .vote-hot.active{background:#1a73e8;color:#fff}
         .vote-cold{border-color:#4db6ff;color:#4db6ff} .vote-cold.active{background:#4db6ff;color:#fff}
         .deal-card{background:#fff;border-radius:16px;border:1px solid var(--border);transition:.2s;overflow:hidden}
         .deal-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.12);transform:translateY(-2px)}
-        .deal-card.featured{border:2px solid #ff6b00} .deal-card.expired{opacity:.6}
+        .deal-card.featured{border:2px solid #1a73e8} .deal-card.expired{opacity:.6}
         .badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
         ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#f1f1f1} ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
         @media(max-width:768px){.desktop-only{display:none!important}.main-grid{grid-template-columns:1fr!important}.sidebar{display:none}}
@@ -203,22 +264,22 @@ export default function App() {
 
       {/* HEADER */}
       <header style={{ background: "#1a1a2e", color: "#fff", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,0,0,.3)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto", padding: "0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, height: 64, justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ fontSize: 28 }}>🔥</div>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>HOT<span style={{ color: "var(--orange)" }}>דילים</span></div>
+                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>Hot <span style={{ color: "var(--orange)" }}>IL Deals</span></div>
                 <div style={{ fontSize: 11, color: "#aaa" }}>קהילת הדילים הטובה בישראל</div>
               </div>
             </div>
 
-            <div style={{ flex: 1, maxWidth: 420, position: "relative" }} className="desktop-only">
+            <div style={{ flex: 1, maxWidth: 700, position: "relative" }} className="desktop-only">
               <input
                 placeholder="🔍  חפש דילים..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
-                style={{ background: "rgba(255,255,255,.1)", border: "1.5px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 30, padding: "10px 20px" }}
+                style={{ background: "rgba(255,255,255,.1)", border: "1.5px solid rgba(255,255,255,.2)", color: "#fff", borderRadius: 30, padding: "13px 28px", fontSize: 16 }}
               />
             </div>
 
@@ -234,7 +295,9 @@ export default function App() {
                   )}
                   <button className="btn btn-primary" onClick={() => setModal("newdeal")} style={{ padding: "8px 16px", fontSize: 13 }}>➕ שתף דיל</button>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", background: "rgba(255,255,255,.1)", borderRadius: 10 }}>
-                    <span style={{ fontSize: 20 }}>{user.avatar}</span>
+                    <button onClick={() => setModal("avatar")} title="ערוך אווטאר" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center" }}>
+                      <Avatar avatar={user.avatar} size={32} />
+                    </button>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 700 }}>{user.username}</div>
                       {user.role === "admin" && <div style={{ fontSize: 10, color: "#ffcc00" }}>מנהל</div>}
@@ -252,10 +315,10 @@ export default function App() {
           </div>
 
           {/* Category bar */}
-          <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "10px 0", scrollbarWidth: "none" }}>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0", scrollbarWidth: "none" }}>
             {["הכל", ...categories.map(c => c.name)].map(c => (
               <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
-                style={{ border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
+                style={{ border: "none", borderRadius: 22, padding: "9px 20px", fontSize: 15, fontWeight: 700, whiteSpace: "nowrap",
                   background: activeCategory === c ? "var(--orange)" : "rgba(255,255,255,.1)",
                   color: activeCategory === c ? "#fff" : "rgba(255,255,255,.7)", transition: ".2s" }}>
                 {c}
@@ -266,13 +329,13 @@ export default function App() {
       </header>
 
       {/* MAIN */}
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 20px" }}>
+      <main style={{ maxWidth: 1600, margin: "0 auto", padding: "24px 20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }} className="main-grid">
           {/* Feed */}
           <div>
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, background: "#fff", borderRadius: 12, padding: 4, marginBottom: 20, boxShadow: "var(--shadow)", border: "1px solid var(--border)", width: "fit-content" }}>
-              {[["hot","🔥 הכי חמים"],["new","🆕 חדשים"]].map(([id, label]) => (
+              {[["hot","🔥 הכי חמים"],["warm","♨️ חמים"],["new","🆕 חדשים"]].map(([id, label]) => (
                 <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
                   style={{ border: "none", borderRadius: 10, padding: "8px 18px", fontWeight: 700, fontSize: 14,
                     background: activeTab === id ? "var(--orange)" : "transparent",
@@ -346,13 +409,13 @@ export default function App() {
                     <div style={{ fontSize:13,fontWeight:600,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180 }}>{d.title}</div>
                     <div style={{ fontSize:12,color:"var(--orange)",fontWeight:800 }}>₪{(+d.deal_price).toLocaleString()}</div>
                   </div>
-                  <div style={{ fontSize:11,fontWeight:700,color:"#ff6b00" }}>🔥{d.hot-d.cold}</div>
+                  <div style={{ fontSize:11,fontWeight:700,color:"#1a73e8" }}>🔥{d.hot-d.cold}</div>
                 </div>
               ))}
             </div>
 
             {!user && (
-              <div style={{ background: "linear-gradient(135deg,#ff6b00,#ff2d2d)", borderRadius: 16, padding: 20, color: "#fff", textAlign: "center" }}>
+              <div style={{ background: "linear-gradient(135deg,#1a73e8,#1565c0)", borderRadius: 16, padding: 20, color: "#fff", textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🔥</div>
                 <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 8 }}>הצטרף לקהילה!</div>
                 <div style={{ fontSize: 13, marginBottom: 16, opacity: 0.9 }}>שתף דילים, הצבע, וחסוך כסף</div>
@@ -378,6 +441,17 @@ export default function App() {
           onUpdate={adminUpdateDeal}
           onDelete={adminDeleteDeal}
           onBanUser={adminBanUser}
+        />
+      )}
+      {modal === "google_username" && (
+        <GoogleUsernameModal onComplete={googleComplete} onClose={() => setModal(null)} />
+      )}
+      {modal === "avatar" && user && (
+        <AvatarEditModal
+          currentAvatar={user.avatar}
+          onPhotoUpload={updateAvatarPhoto}
+          onEmojiSelect={updateAvatarEmoji}
+          onClose={() => setModal(null)}
         />
       )}
 
@@ -424,7 +498,7 @@ function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, o
         </div>
       </div>
       <div style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 16px",borderTop:"1px solid var(--border)",background:"#fafafa",borderRadius:"0 0 16px 16px",flexWrap:"wrap" }}>
-        <span style={{ fontSize:13,color:"var(--mid)",display:"flex",alignItems:"center",gap:5 }}>{deal.avatar} {deal.username}</span>
+        <span style={{ fontSize:13,color:"var(--mid)",display:"flex",alignItems:"center",gap:5 }}><Avatar avatar={deal.avatar} size={20} /> {deal.username}</span>
         <button onClick={onOpen} style={{ fontSize:13,color:"var(--mid)",background:"none",border:"none",display:"flex",alignItems:"center",gap:4 }}>💬 {deal.comment_count} תגובות</button>
         <a href={deal.url} target="_blank" rel="noreferrer" style={{ fontSize:13,color:"var(--blue)",fontWeight:700 }}>🛒 לחנות</a>
         {isAdmin && (
@@ -484,7 +558,7 @@ function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
             <span>🔥 חם ({deal.hot})</span><span>🧊 קר ({deal.cold})</span>
           </div>
           <div style={{ height:6,borderRadius:3,background:"#eee",overflow:"hidden" }}>
-            <div style={{ height:"100%",borderRadius:3,transition:".5s",width:`${Math.round(+deal.hot/Math.max(+deal.hot+ +deal.cold,1)*100)}%`,background:"linear-gradient(to right,#ff6b00,#ff2d2d)" }} />
+            <div style={{ height:"100%",borderRadius:3,transition:".5s",width:`${Math.round(+deal.hot/Math.max(+deal.hot+ +deal.cold,1)*100)}%`,background:"linear-gradient(to right,#1a73e8,#1565c0)" }} />
           </div>
         </div>
         {/* Comments */}
@@ -494,7 +568,7 @@ function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
             {!deal.comments?.length && <div style={{ color:"var(--mid)",textAlign:"center",padding:24,fontSize:14 }}>היה הראשון להגיב! 🎤</div>}
             {deal.comments?.map(c => (
               <div key={c.id} style={{ display:"flex",gap:10,marginBottom:14 }}>
-                <span style={{ fontSize:24,flexShrink:0 }}>{c.avatar}</span>
+                <Avatar avatar={c.avatar} size={28} />
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:4 }}>
                     <span style={{ fontWeight:700,fontSize:13 }}>{c.username}</span>
@@ -507,7 +581,7 @@ function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
           </div>
           {currentUser ? (
             <div style={{ display:"flex",gap:10 }}>
-              <span style={{ fontSize:24,flexShrink:0 }}>{currentUser.avatar}</span>
+              <Avatar avatar={currentUser.avatar} size={28} />
               <div style={{ flex:1,display:"flex",gap:8 }}>
                 <input value={comment} onChange={e => setComment(e.target.value)} onKeyDown={e => e.key==="Enter" && (onComment(deal.id,comment),setComment(""))} placeholder="כתוב תגובה..." style={{ flex:1 }} />
                 <button className="btn btn-primary" onClick={() => { onComment(deal.id,comment); setComment(""); }} style={{ padding:"10px 16px" }}>שלח</button>
@@ -525,6 +599,24 @@ function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
 }
 
 // ─── Auth Modals ──────────────────────────────────────────────────────────────
+function GoogleButton({ label = "כניסה עם Google" }) {
+  return (
+    <a
+      href="http://localhost:5000/api/auth/google"
+      style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"11px 0",borderRadius:10,
+        border:"1.5px solid #dadce0",background:"#fff",color:"#3c4043",fontWeight:700,fontSize:15,
+        textDecoration:"none",transition:".2s",boxShadow:"0 1px 3px rgba(0,0,0,.08)" }}>
+      <svg width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      {label}
+    </a>
+  );
+}
+
 function LoginModal({ onLogin, onClose, onRegister }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -537,7 +629,13 @@ function LoginModal({ onLogin, onClose, onRegister }) {
           <p style={{ color:"var(--mid)",fontSize:14,marginTop:4 }}>התחבר כדי להצביע ולשתף דילים</p>
         </div>
         <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-          <div><label>שם משתמש</label><input placeholder="הכנס שם משתמש" value={username} onChange={e => setUsername(e.target.value)} /></div>
+          <GoogleButton label="כניסה עם Google" />
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ flex:1,height:1,background:"var(--border)" }} />
+            <span style={{ fontSize:13,color:"var(--mid)" }}>או</span>
+            <div style={{ flex:1,height:1,background:"var(--border)" }} />
+          </div>
+          <div><label>שם משתמש</label><input type="text" placeholder="הכנס שם משתמש" value={username} onChange={e => setUsername(e.target.value)} /></div>
           <div><label>סיסמה</label><input type="password" placeholder="הכנס סיסמה" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key==="Enter" && onLogin(username,password)} /></div>
           <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }} onClick={() => onLogin(username,password)}>כניסה</button>
           <div style={{ textAlign:"center",fontSize:14,color:"var(--mid)" }}>
@@ -551,24 +649,176 @@ function LoginModal({ onLogin, onClose, onRegister }) {
 }
 
 function RegisterModal({ onRegister, onClose, onLogin }) {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername]       = useState("");
+  const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth:400 }}>
-        <div style={{ textAlign:"center",marginBottom:24 }}>
+      <div className="modal-box" style={{ maxWidth:420 }}>
+        <div style={{ textAlign:"center",marginBottom:20 }}>
           <div style={{ fontSize:48,marginBottom:8 }}>🎉</div>
           <h2 style={{ fontWeight:900,fontSize:24 }}>הצטרף לקהילה</h2>
         </div>
         <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-          <div><label>שם משתמש</label><input placeholder="בחר שם ייחודי" value={username} onChange={e => setUsername(e.target.value)} /></div>
-          <div><label>אימייל</label><input type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-          <div><label>סיסמה</label><input type="password" placeholder="לפחות 6 תווים" value={password} onChange={e => setPassword(e.target.value)} /></div>
-          <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }} onClick={() => onRegister(username,email,password)}>🚀 יצירת חשבון</button>
+          <GoogleButton label="הרשמה עם Google" />
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ flex:1,height:1,background:"var(--border)" }} />
+            <span style={{ fontSize:13,color:"var(--mid)" }}>או הרשמה עם אימייל</span>
+            <div style={{ flex:1,height:1,background:"var(--border)" }} />
+          </div>
+          <div><label>שם משתמש ציבורי *</label><input placeholder="בחר שם ייחודי" value={username} onChange={e => setUsername(e.target.value)} /></div>
+          <div>
+            <label>אימייל (פרטי, לא יוצג בפומבי)</label>
+            <input type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div><label>סיסמה (לפחות 6 תווים)</label><input type="password" placeholder="••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
+          <div>
+            <label>בחר אווטאר</label>
+            <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginTop:4 }}>
+              {AVATARS.map(a => (
+                <button key={a} onClick={() => setSelectedAvatar(a)}
+                  style={{ width:42,height:42,fontSize:22,borderRadius:10,border: selectedAvatar===a ? "2.5px solid var(--orange)" : "1.5px solid var(--border)",
+                    background: selectedAvatar===a ? "#eff6ff" : "#fafafa",cursor:"pointer",transition:".15s",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                  {a}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize:12,color:"var(--mid)",marginTop:6 }}>ניתן להחליף לתמונה אישית לאחר ההרשמה</div>
+          </div>
+          <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }}
+            onClick={() => onRegister(username, email, password, selectedAvatar)}>
+            🚀 יצירת חשבון
+          </button>
           <div style={{ textAlign:"center",fontSize:14,color:"var(--mid)" }}>
             כבר יש לך חשבון?{" "}
             <button onClick={onLogin} style={{ background:"none",border:"none",color:"var(--orange)",fontWeight:700,fontSize:14,cursor:"pointer" }}>כניסה</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Google Username Modal ────────────────────────────────────────────────────
+function GoogleUsernameModal({ onComplete, onClose }) {
+  const [username, setUsername] = useState("");
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
+
+  const handleSubmit = async () => {
+    if (!username.trim()) return setError("יש לבחור שם משתמש");
+    setLoading(true);
+    setError("");
+    try {
+      await onComplete(username.trim());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box" style={{ maxWidth:380 }}>
+        <div style={{ textAlign:"center",marginBottom:24 }}>
+          <div style={{ fontSize:48,marginBottom:8 }}>🙋</div>
+          <h2 style={{ fontWeight:900,fontSize:22 }}>בחר שם משתמש</h2>
+          <p style={{ color:"var(--mid)",fontSize:14,marginTop:6 }}>השם יוצג בפומבי. האימייל שלך יישמר פרטי.</p>
+        </div>
+        <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
+          <div>
+            <label>שם משתמש ציבורי</label>
+            <input
+              placeholder="בחר שם ייחודי..."
+              value={username}
+              onChange={e => { setUsername(e.target.value); setError(""); }}
+              onKeyDown={e => e.key==="Enter" && handleSubmit()}
+              autoFocus
+            />
+          </div>
+          {error && <div style={{ color:"var(--red)",fontSize:13,fontWeight:600 }}>❌ {error}</div>}
+          <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }}
+            onClick={handleSubmit} disabled={loading}>
+            {loading ? "שומר..." : "✅ סיום הרשמה"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Avatar Edit Modal ────────────────────────────────────────────────────────
+function AvatarEditModal({ currentAvatar, onPhotoUpload, onEmojiSelect, onClose }) {
+  const fileRef = useRef(null);
+  const [preview, setPreview]   = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const handleUpload = async () => {
+    const file = fileRef.current?.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await onPhotoUpload(file);
+      onClose();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEmoji = async (emoji) => {
+    await onEmojiSelect(emoji);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box" style={{ maxWidth:380 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+          <h2 style={{ fontWeight:900,fontSize:20 }}>✏️ ערוך אווטאר</h2>
+          <button onClick={onClose} style={{ background:"none",border:"none",fontSize:24,color:"var(--mid)",cursor:"pointer" }}>×</button>
+        </div>
+
+        {/* Current avatar */}
+        <div style={{ textAlign:"center",marginBottom:20 }}>
+          <Avatar avatar={currentAvatar} size={72} />
+          <div style={{ fontSize:13,color:"var(--mid)",marginTop:8 }}>האווטאר הנוכחי שלך</div>
+        </div>
+
+        {/* Photo upload */}
+        <div style={{ background:"#f8f9fa",borderRadius:12,padding:16,marginBottom:16 }}>
+          <div style={{ fontWeight:700,fontSize:14,marginBottom:10 }}>📷 העלה תמונה אישית</div>
+          {preview && (
+            <img src={preview} alt="" style={{ width:80,height:80,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto 12px" }} />
+          )}
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile}
+            style={{ display:"block",fontSize:13,marginBottom:10,width:"100%" }} />
+          <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:10 }}
+            onClick={handleUpload} disabled={uploading || !preview}>
+            {uploading ? "מעלה..." : "שמור תמונה"}
+          </button>
+        </div>
+
+        {/* Emoji picker */}
+        <div>
+          <div style={{ fontWeight:700,fontSize:14,marginBottom:10 }}>🎭 או בחר אווטאר</div>
+          <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+            {AVATARS.map(a => (
+              <button key={a} onClick={() => handleEmoji(a)}
+                style={{ width:44,height:44,fontSize:24,borderRadius:10,
+                  border: currentAvatar===a ? "2.5px solid var(--orange)" : "1.5px solid var(--border)",
+                  background: currentAvatar===a ? "#eff6ff" : "#fafafa",cursor:"pointer",transition:".15s",
+                  display:"flex",alignItems:"center",justifyContent:"center" }}>
+                {a}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -654,7 +904,7 @@ function AdminPanel({ tab, onTab, deals, users, stats, onClose, onUpdate, onDele
               <div style={{ flex:1,minWidth:0 }}>
                 <div style={{ fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{deal.title}</div>
                 <div style={{ fontSize:11,color:"var(--mid)",marginTop:2 }}>
-                  {deal.store} · {deal.category} · {deal.avatar}{deal.username}
+                  {deal.store} · {deal.category} · <Avatar avatar={deal.avatar} size={14} style={{ verticalAlign:"middle" }} />{deal.username}
                   {!deal.is_approved && <span style={{ color:"var(--blue)",marginRight:6 }}>· ממתין</span>}
                   {deal.is_featured && <span style={{ color:"#f59c00",marginRight:6 }}>· מוצג</span>}
                 </div>
@@ -670,7 +920,7 @@ function AdminPanel({ tab, onTab, deals, users, stats, onClose, onUpdate, onDele
 
           {tab==="users" && users.map(u => (
             <div key={u.id} style={{ display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
-              <span style={{ fontSize:32 }}>{u.avatar}</span>
+              <Avatar avatar={u.avatar} size={36} />
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:700,fontSize:14 }}>
                   {u.username} {u.role==="admin" && <span style={{ background:"#ffcc00",color:"#333",borderRadius:4,padding:"1px 6px",fontSize:11 }}>מנהל</span>}
