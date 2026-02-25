@@ -206,7 +206,7 @@ export default function App() {
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, height: 64, justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 28 }}>🔥</div>
+              <img src="/Logo.png" alt="hotdeals logo" style={{ height: 44, width: "auto", mixBlendMode: "screen" }} />
               <div>
                 <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>HOT<span style={{ color: "var(--orange)" }}>דילים</span></div>
                 <div style={{ fontSize: 11, color: "#aaa" }}>קהילת הדילים הטובה בישראל</div>
