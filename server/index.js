@@ -14,7 +14,15 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'hotdeals_secret_change_in_production';
 
 // ── Middleware ───────────────────────────────────────────────
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    process.env.CLIENT_URL,
+    /\.vercel\.app$/
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // ── DB Pool ──────────────────────────────────────────────────
