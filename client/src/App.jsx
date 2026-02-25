@@ -635,7 +635,7 @@ function LoginModal({ onLogin, onClose, onRegister }) {
             <span style={{ fontSize:13,color:"var(--mid)" }}>או</span>
             <div style={{ flex:1,height:1,background:"var(--border)" }} />
           </div>
-          <div><label>שם משתמש</label><input placeholder="הכנס שם משתמש" value={username} onChange={e => setUsername(e.target.value)} /></div>
+          <div><label>שם משתמש</label><input type="text" placeholder="הכנס שם משתמש" value={username} onChange={e => setUsername(e.target.value)} /></div>
           <div><label>סיסמה</label><input type="password" placeholder="הכנס סיסמה" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key==="Enter" && onLogin(username,password)} /></div>
           <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }} onClick={() => onLogin(username,password)}>כניסה</button>
           <div style={{ textAlign:"center",fontSize:14,color:"var(--mid)" }}>
