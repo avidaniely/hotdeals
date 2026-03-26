@@ -66,6 +66,22 @@ const db = mysql.createPool({
       console.log('✅ Seeded default hunter sources');
     }
 
+    // Ensure aggregator sources exist (for existing installs)
+    const aggregatorSources = [
+      { name: 'bee.deals',     url: 'https://bee.deals/',                                          store: 'bee.deals',  category_name: 'הכל' },
+      { name: 'Amazon IL',     url: 'https://www.amazon.co.il/gp/goldbox',                         store: 'Amazon',     category_name: 'הכל' },
+      { name: 'Banggood',      url: 'https://www.banggood.com/deals.html',                         store: 'Banggood',   category_name: 'אלקטרוניקה' },
+      { name: 'AliExpress IL', url: 'https://www.aliexpress.com/category/4000000000/deals.html',   store: 'AliExpress', category_name: 'הכל' },
+      { name: 'FXP Deals',     url: 'https://www.fxp.co.il/forumdisplay.php?f=137',               store: 'FXP',        category_name: 'אלקטרוניקה' },
+    ];
+    for (const s of aggregatorSources) {
+      const [[{ n }]] = await db.execute('SELECT COUNT(*) AS n FROM hunter_sources WHERE name = ?', [s.name]);
+      if (!n) await db.execute(
+        'INSERT INTO hunter_sources (name, url, store, category_name) VALUES (?,?,?,?)',
+        [s.name, s.url, s.store, s.category_name]
+      );
+    }
+
     // hunter_config table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS hunter_config (
@@ -99,6 +115,16 @@ const db = mysql.createPool({
     }
   } catch (e) {
     console.error('Migration error:', e.message);
+  }
+})();
+
+// ── Auto-migrate quality_score column ────────────────────────
+(async () => {
+  try {
+    await db.execute('ALTER TABLE deals ADD COLUMN quality_score FLOAT DEFAULT NULL');
+    console.log('✅ Added quality_score column');
+  } catch (e) {
+    if (e.code !== 'ER_DUP_FIELDNAME') console.error('quality_score migration:', e.message);
   }
 })();
 
@@ -259,6 +285,8 @@ app.get('/api/deals', async (req, res) => {
 
     const orderBy = sort === 'hot'
       ? 'ORDER BY (hot - cold) DESC, d.created_at DESC'
+      : sort === 'quality'
+      ? 'ORDER BY ISNULL(d.quality_score), d.quality_score DESC, d.created_at DESC'
       : 'ORDER BY d.created_at DESC';
 
     const [rows] = await db.execute(

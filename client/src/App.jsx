@@ -18,6 +18,15 @@ const getTemp = (hot, cold) => {
   return              { label: "🧊 קר",        color: "#4db6ff", bg: "#f0f8ff" };
 };
 const pct = (p, o) => o ? Math.round((1 - p / o) * 100) : 0;
+const qualityBadge = (score) => {
+  if (!score) return null;
+  if (score >= 90) return { label: `💎 ${score}`, color: '#7C3AED', bg: '#F5F3FF' };
+  if (score >= 75) return { label: `🔥 ${score}`, color: '#DC2626', bg: '#FFF0F0' };
+  if (score >= 60) return { label: `⭐ ${score}`, color: '#D97706', bg: '#FFFBF0' };
+  if (score >= 45) return { label: `👍 ${score}`, color: '#059669', bg: '#F0FFF7' };
+  if (score >= 30) return { label: `💰 ${score}`, color: '#6B7280', bg: '#F3F4F6' };
+  return null;
+};
 const timeAgo = (d) => {
   const diff = (Date.now() - new Date(d)) / 1000;
   if (diff < 60)   return "עכשיו";
@@ -65,7 +74,7 @@ export default function App() {
   const fetchDeals = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { sort: activeTab === "hot" ? "hot" : "new", page };
+      const params = { sort: activeTab === "hot" ? "hot" : activeTab === "quality" ? "quality" : "new", page };
       if (activeCategory !== "הכל") params.category = activeCategory;
       if (search) params.search = search;
       const data = await dealsAPI.list(params);
@@ -363,7 +372,7 @@ export default function App() {
         <div className="mobile-only" style={{ marginBottom:16 }}>
           <div style={{ background:"var(--surface)",border:"1px solid var(--border)",borderRadius:18,padding:12,boxShadow:"var(--sh)" }}>
             <div style={{ display:"flex",gap:8,overflowX:"auto",paddingBottom:4,scrollbarWidth:"none" }}>
-              {[["hot","🔥 הכי חמים"],["new","✨ חדשים"]].map(([id,label]) => (
+              {[["hot","🔥 הכי חמים"],["new","✨ חדשים"],["quality","💎 איכות"]].map(([id,label]) => (
                 <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
                   style={{ border:"none",borderRadius:999,padding:"9px 14px",fontWeight:800,fontSize:13,whiteSpace:"nowrap",flexShrink:0,
                     background:activeTab===id?"linear-gradient(135deg,var(--blue-2),var(--blue))":"var(--surface-2)",
@@ -389,7 +398,7 @@ export default function App() {
           <div>
             {/* Tabs */}
             <div style={{ display: "flex", gap: 4, background: "var(--surface)", borderRadius: 14, padding: 5, marginBottom: 22, boxShadow: "var(--sh)", border: "1px solid var(--border)", width: "fit-content" }}>
-              {[["hot","🔥 הכי חמים"],["new","✨ חדשים"]].map(([id, label]) => (
+              {[["hot","🔥 הכי חמים"],["new","✨ חדשים"],["quality","💎 איכות"]].map(([id, label]) => (
                 <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
                   style={{ border: "none", borderRadius: 10, padding: "9px 22px", fontWeight: 700, fontSize: 14, transition: "var(--tr)",
                     background: activeTab === id ? "linear-gradient(135deg,var(--blue-2),var(--blue))" : "transparent",
@@ -542,6 +551,7 @@ export default function App() {
 function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, onAdminDelete }) {
   const temp = getTemp(+deal.hot, +deal.cold);
   const discount = pct(+deal.deal_price, +deal.original_price);
+  const qBadge = qualityBadge(deal.quality_score);
   return (
     <div className={`deal-card deal-entrance${deal.is_featured ? " featured" : ""}${deal.is_expired ? " expired" : ""}`}>
       {/* Temperature accent bar */}
@@ -550,6 +560,7 @@ function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, o
       {/* Header badges */}
       <div style={{ display:"flex",alignItems:"center",gap:6,padding:"12px 18px 0",flexWrap:"wrap" }}>
         <span className="badge" style={{ background:temp.bg,color:temp.color }}>{temp.label}</span>
+        {qBadge && <span className="badge" style={{ background:qBadge.bg,color:qBadge.color,fontWeight:800 }} title="ציון איכות דיל">{qBadge.label}</span>}
         {deal.is_featured && <span className="badge" style={{ background:"#FFF8E1",color:"#D4920A" }}>⭐ מוצגת</span>}
         {deal.is_expired && <span className="badge" style={{ background:"#FEECEC",color:"var(--danger)" }}>⏰ פג תוקף</span>}
         {!deal.is_approved && <span className="badge" style={{ background:"#E8F0FE",color:"var(--blue)" }}>⏳ ממתין</span>}
@@ -1002,7 +1013,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     {
       label: "אגרגטור דילים",
       desc: "לאתרים כמו bee.deals — מסנן לפי פופולריות",
-      prompt: `אתה סוכן שמחלץ דילים מאתר קהילתי בשם {store}.\nאתרים אלו מציגים דילים שמשתמשים שיתפו, עם הצבעות חמות/קרות ותגובות.\n\nכלול רק דילים שעומדים בכל הקריטריונים הבאים:\n1. לפחות {min_votes} הצבעות חמות (hot votes/upvotes)\n2. לפחות {min_comments} תגובות\n3. יש מחיר ברור\n\nעדף דילים עם:\n- הרבה הצבעות יחסית לגיל הפוסט (טרנדי)\n- אחוז הנחה גבוה\n- מוצרים פופולריים\n\nהחזר JSON בלבד:\n[{"title":"...","description":"...","deal_price":0,"original_price":null,"url":"..."}]`,
+      prompt: `אתה סוכן שמחלץ דילים מאתר קהילתי בשם {store}.\nאתרים אלו מציגים דילים שמשתמשים שיתפו, עם הצבעות ותגובות.\n\nכלול רק דילים עם לפחות {min_votes} הצבעות ו-{min_comments} תגובות.\n\nעבור כל דיל חלץ:\n- title: שם המוצר\n- description: תיאור קצר\n- deal_price: מחיר מבצע (מספר)\n- original_price: מחיר מקורי אם קיים (מספר, אחרת null)\n- url: קישור לדיל\n- votes: מספר הצבעות/upvotes (מספר, 0 אם לא נמצא)\n- comments: מספר תגובות (מספר, 0 אם לא נמצא)\n- hours_ago: גיל הדיל בשעות (מספר, 0 אם לא ידוע)\n\nהחזר JSON בלבד:\n[{"title":"...","description":"...","deal_price":0,"original_price":null,"url":"...","votes":0,"comments":0,"hours_ago":0}]`,
     },
   ];
 

@@ -60,6 +60,41 @@ async function extractDealsWithAI(pageText, source, config) {
   }
 }
 
+// ── Quality score algorithm ───────────────────────────────────
+// Score 0–100 based on: discount %, savings amount, community signals, recency
+function calculateQualityScore(deal) {
+  let score = 0;
+  const price    = parseFloat(deal.deal_price)     || 0;
+  const original = parseFloat(deal.original_price) || 0;
+  const votes    = parseInt(deal.votes)             || 0;
+  const comments = parseInt(deal.comments)          || 0;
+  const hoursAgo = parseFloat(deal.hours_ago)       || 0;
+
+  // 1. Discount % score (0–40 pts): 80%+ discount = full 40
+  if (original > price && original > 0) {
+    const discountPct = (1 - price / original) * 100;
+    score += Math.min(discountPct * 0.5, 40);
+  }
+
+  // 2. Absolute savings score (0–20 pts): ₪500 saved = full 20
+  if (original > price) {
+    score += Math.min((original - price) / 25, 20);
+  }
+
+  // 3. Community engagement (0–25 pts): votes×2 + comments×3, cap at 25
+  score += Math.min((votes * 2 + comments * 3) / 4, 25);
+
+  // 4. Recency bonus (0–10 pts): decays over 48h, full 10 pts if ≤5h old
+  if (hoursAgo > 0) {
+    score += Math.max(10 - hoursAgo / 4.8, 0);
+  }
+
+  // 5. Sanity: suspiciously cheap items lose 5 pts
+  if (price > 0 && price < 10) score = Math.max(score - 5, 0);
+
+  return Math.round(Math.min(score, 100));
+}
+
 // ── Submit to DB ─────────────────────────────────────────────
 async function submitDeal(deal, source, categoryId, adminId, db) {
   if (!deal.title || !deal.deal_price) return false;
@@ -68,10 +103,11 @@ async function submitDeal(deal, source, categoryId, adminId, db) {
     [deal.title, deal.url || '']
   );
   if (existing) return false;
+  const qualityScore = calculateQualityScore(deal);
   await db.execute(
-    `INSERT INTO deals (user_id, category_id, title, description, url, image_url, store, original_price, deal_price, is_approved)
-     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, 0)`,
-    [adminId, categoryId, deal.title, deal.description || '', deal.url || null, source.store, deal.original_price || null, deal.deal_price]
+    `INSERT INTO deals (user_id, category_id, title, description, url, image_url, store, original_price, deal_price, quality_score, is_approved)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 0)`,
+    [adminId, categoryId, deal.title, deal.description || '', deal.url || null, source.store, deal.original_price || null, deal.deal_price, qualityScore || null]
   );
   return true;
 }
