@@ -37,7 +37,10 @@ async function extractDealsWithAI(pageText, source, config) {
   const apiKey = config.ai_api_key || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('No AI API key configured');
 
-  const prompt = (config.system_prompt || '').replace('{store}', source.store)
+  const prompt = (config.system_prompt || '')
+    .replace('{store}', source.store)
+    .replace('{min_votes}', config.min_votes || '5')
+    .replace('{min_comments}', config.min_comments || '2')
     + `\n\nPage text from ${source.store}:\n${pageText}`;
 
   const client = new Anthropic({ apiKey });

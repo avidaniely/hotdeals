@@ -999,6 +999,11 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
       desc: "מתמקד בגאדג׳טים וטכנולוגיה",
       prompt: `אתה מומחה טכנולוגיה שמחפש דילים על אלקטרוניקה וגאדג׳טים בחנות {store}.\nחלץ רק מוצרי טכנולוגיה: סמארטפונים, מחשבים, אוזניות, מסכים, רכיבים, אביזרי מחשב ומוצרי חשמל.\nהחזר JSON בלבד:\n[{"title":"...","description":"תיאור טכני קצר","deal_price":0,"original_price":null,"url":"..."}]`,
     },
+    {
+      label: "אגרגטור דילים",
+      desc: "לאתרים כמו bee.deals — מסנן לפי פופולריות",
+      prompt: `אתה סוכן שמחלץ דילים מאתר קהילתי בשם {store}.\nאתרים אלו מציגים דילים שמשתמשים שיתפו, עם הצבעות חמות/קרות ותגובות.\n\nכלול רק דילים שעומדים בכל הקריטריונים הבאים:\n1. לפחות {min_votes} הצבעות חמות (hot votes/upvotes)\n2. לפחות {min_comments} תגובות\n3. יש מחיר ברור\n\nעדף דילים עם:\n- הרבה הצבעות יחסית לגיל הפוסט (טרנדי)\n- אחוז הנחה גבוה\n- מוצרים פופולריים\n\nהחזר JSON בלבד:\n[{"title":"...","description":"...","deal_price":0,"original_price":null,"url":"..."}]`,
+    },
   ];
 
   const TABS = [
@@ -1280,6 +1285,30 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                             color:aiConfig.enabled==='1'?"#2e7d32":"#c62828" }}>
                           {aiConfig.enabled==='1' ? "● מופעל" : "○ מושהה"}
                         </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Popularity thresholds */}
+                  <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,border:"1px solid var(--border)" }}>
+                    <div style={{ fontWeight:800,fontSize:14,color:"var(--text)",marginBottom:6 }}>📈 סף פופולריות (לאתרי אגרגטור)</div>
+                    <div style={{ fontSize:12,color:"var(--text-2)",marginBottom:14 }}>
+                      השתמש ב-<code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{min_votes}'}</code> ו-<code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{min_comments}'}</code> בפרומפט כדי לסנן לפי פופולריות
+                    </div>
+                    <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+                      <div>
+                        <label style={fieldLabel}>מינימום הצבעות 🔥</label>
+                        <input type="number" min={0} max={1000}
+                          value={aiConfig.min_votes ?? 5}
+                          onChange={e=>setAiConfig(c=>({...c,min_votes:e.target.value}))}
+                          style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={fieldLabel}>מינימום תגובות 💬</label>
+                        <input type="number" min={0} max={500}
+                          value={aiConfig.min_comments ?? 2}
+                          onChange={e=>setAiConfig(c=>({...c,min_comments:e.target.value}))}
+                          style={inputStyle} />
                       </div>
                     </div>
                   </div>

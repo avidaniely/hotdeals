@@ -90,6 +90,13 @@ const db = mysql.createPool({
       `);
       console.log('✅ Seeded default hunter config');
     }
+    // Ensure threshold keys exist (for existing installations)
+    for (const [k, v] of [['min_votes','5'],['min_comments','2']]) {
+      await db.execute(
+        'INSERT INTO hunter_config (config_key, config_value) VALUES (?,?) ON DUPLICATE KEY UPDATE config_value=config_value',
+        [k, v]
+      );
+    }
   } catch (e) {
     console.error('Migration error:', e.message);
   }
@@ -503,7 +510,7 @@ app.get('/api/admin/hunter-config', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/hunter-config  — upsert one or more keys
 app.patch('/api/admin/hunter-config', adminAuth, async (req, res) => {
-  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','system_prompt'];
+  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','system_prompt','min_votes','min_comments'];
   const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
   if (!entries.length) return res.status(400).json({ error: 'no valid keys' });
   for (const [key, value] of entries) {
