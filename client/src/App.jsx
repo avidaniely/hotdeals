@@ -252,18 +252,8 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 20, height: 70, justifyContent: "space-between" }}>
 
             {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-              <div style={{ width:50,height:50,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.08))",border:"1px solid rgba(255,255,255,.2)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.2),0 10px 24px rgba(0,0,0,.18)",backdropFilter:"blur(10px)",fontSize:28,lineHeight:1 }}>
-                🇮🇱
-              </div>
-              <div style={{ display:"flex",flexDirection:"column",gap:2 }}>
-                <div style={{ fontWeight:900,fontSize:28,letterSpacing:"-0.9px",lineHeight:1,display:"flex",alignItems:"center",textShadow:"0 2px 10px rgba(0,0,0,.18)" }}>
-                  <span style={{ color:"#fff" }}>hot</span>
-                  <span style={{ margin:"0 1px",background:"linear-gradient(180deg,#dff1ff 0%,#7ec8ff 55%,#b8e0ff 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",filter:"drop-shadow(0 2px 8px rgba(126,200,255,.28))" }}>IL</span>
-                  <span style={{ color:"#fff" }}>deals</span>
-                </div>
-                <div style={{ fontSize:11,color:"rgba(255,255,255,.72)",fontWeight:700,letterSpacing:".04em" }}>קהילת הדילים הישראלית</div>
-              </div>
+            <div style={{ display:"flex",alignItems:"center",flexShrink:0 }}>
+              <img src="/logo.png" alt="hotILdeals" style={{ height:58,width:"auto",filter:"drop-shadow(0 4px 14px rgba(0,0,0,.4))" }} />
             </div>
 
             {/* Search */}
