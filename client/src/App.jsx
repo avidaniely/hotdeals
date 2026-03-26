@@ -166,9 +166,9 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'Assistant',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
+    <div style={{ fontFamily: "'Rubik',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         :root{
           --blue:#0038A8;--blue-2:#1a56db;--blue-dk:#002A8A;
