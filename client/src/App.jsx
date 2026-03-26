@@ -8,8 +8,6 @@ import {
   saveToken, clearToken, getToken,
 } from "./api";
 
-const AVATARS = ['🐱','🦊','🐸','🦋','🐧','🦁','🐨','🦄','🐙','🦅'];
-
 // ── Helpers ──────────────────────────────────────────────────
 const getTemp = (hot, cold) => {
   const s = hot - cold;
@@ -204,13 +202,13 @@ export default function App() {
         input:focus,textarea:focus,select:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 4px rgba(0,56,168,.1)}
         label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text-2)}
         .modal-overlay{position:fixed;inset:0;background:rgba(8,18,48,.65);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(12px)}
-        .modal-box{background:#fff;border-radius:var(--r-lg);padding:36px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-lg);animation:slideUp .28s cubic-bezier(.34,1.56,.64,1)}
+        .modal-box{background:#fff;border-radius:var(--r-lg);padding:36px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.28),0 2px 10px rgba(0,0,0,.12);animation:slideUp .28s cubic-bezier(.34,1.56,.64,1)}
         @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
         .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:14px 28px;border-radius:14px;font-weight:700;z-index:9999;animation:toastIn .35s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--sh-lg);display:flex;align-items:center;gap:10px;font-size:14px}
         @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(24px) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        .vote-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 16px;border:2px solid;border-radius:14px;font-weight:800;font-size:13px;transition:var(--tr);background:var(--surface);min-width:54px}
-        .vote-btn:hover{transform:scale(1.08)}
+        .vote-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 16px;border:2px solid;border-radius:18px;font-weight:800;font-size:13px;transition:var(--tr);background:var(--surface);min-width:64px;box-shadow:0 8px 18px rgba(0,28,84,.06)}
+        .vote-btn:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 14px 24px rgba(0,28,84,.12)}
         .vote-btn:active{transform:scale(.95)}
         .vote-hot{border-color:rgba(255,69,0,.25);color:var(--hot)}
         .vote-hot:hover{border-color:var(--hot);background:rgba(255,69,0,.05)}
@@ -218,20 +216,34 @@ export default function App() {
         .vote-cold{border-color:rgba(0,153,255,.25);color:var(--cold)}
         .vote-cold:hover{border-color:var(--cold);background:rgba(0,153,255,.05)}
         .vote-cold.active{background:linear-gradient(135deg,#00b4ff,var(--cold));color:#fff;border-color:var(--cold);box-shadow:0 4px 14px rgba(0,153,255,.38)}
-        .deal-card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);transition:var(--tr);overflow:hidden;position:relative}
-        .deal-card:hover{box-shadow:var(--sh-hover);transform:translateY(-4px);border-color:var(--border-2)}
+        .deal-card{background:linear-gradient(180deg,#fff 0%,#f4f7ff 100%);border-radius:22px;border:1px solid var(--border);transition:var(--tr);overflow:hidden;position:relative;box-shadow:0 10px 28px rgba(0,28,84,.08),0 2px 8px rgba(0,28,84,.04)}
+        .deal-card:hover{box-shadow:0 24px 54px rgba(0,28,84,.16),0 6px 18px rgba(0,28,84,.08);transform:translateY(-6px);border-color:var(--border-2)}
         .deal-card.featured{border-color:rgba(0,56,168,.28);box-shadow:0 0 0 3px rgba(0,56,168,.08)}
         .deal-card.expired{opacity:.52;filter:grayscale(.25)}
-        .card-accent{position:absolute;right:0;top:0;bottom:0;width:5px;border-radius:0 var(--r) var(--r) 0}
+        .deal-entrance{opacity:0;transform:translateY(18px) scale(.985);animation:dealIn .45s cubic-bezier(.22,1,.36,1) forwards}
+        @keyframes dealIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .card-accent{position:absolute;right:0;top:0;bottom:0;width:5px;border-radius:0 22px 22px 0}
         .card-img{overflow:hidden}
         .card-img img{transition:transform .4s cubic-bezier(.4,0,.2,1);display:block}
         .deal-card:hover .card-img img{transform:scale(1.06)}
         .badge{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+        .skeleton-shimmer{position:relative;overflow:hidden}
+        .skeleton-shimmer::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:skeletonMove 1.4s ease-in-out infinite}
+        @keyframes skeletonMove{100%{transform:translateX(100%)}}
+        .mobile-only{display:none!important}
         ::-webkit-scrollbar{width:6px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:rgba(0,56,168,.18);border-radius:3px}
         ::-webkit-scrollbar-thumb:hover{background:rgba(0,56,168,.36)}
-        @media(max-width:768px){.desktop-only{display:none!important}.main-grid{grid-template-columns:1fr!important}.sidebar{display:none}.deal-page-grid{grid-template-columns:1fr!important}.deal-page-sticky{position:static!important}}
+        @media(max-width:768px){
+          .desktop-only{display:none!important}
+          .mobile-only{display:block!important}
+          .main-grid{grid-template-columns:1fr!important}
+          .sidebar{display:none}
+          .deal-page-grid{grid-template-columns:1fr!important}
+          .deal-page-sticky{position:static!important}
+          .deal-card{border-radius:18px}
+        }
       `}</style>
 
       {/* HEADER */}
@@ -241,26 +253,28 @@ export default function App() {
 
             {/* Logo */}
             <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-              <div style={{ fontSize: 34, filter: "drop-shadow(0 2px 6px rgba(0,0,0,.25))", lineHeight: 1 }}>🇮🇱</div>
-              <div>
-                <div style={{ fontWeight: 900, fontSize: 24, letterSpacing: "-0.5px", lineHeight: 1.1, display: "flex", alignItems: "center" }}>
-                  <span style={{ color: "#fff" }}>hot</span>
-                  <span style={{ background: "linear-gradient(90deg,#7ec8ff,#b8e0ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>IL</span>
-                  <span style={{ color: "#fff" }}>deals</span>
+              <div style={{ width:50,height:50,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.08))",border:"1px solid rgba(255,255,255,.2)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.2),0 10px 24px rgba(0,0,0,.18)",backdropFilter:"blur(10px)",fontSize:28,lineHeight:1 }}>
+                🇮🇱
+              </div>
+              <div style={{ display:"flex",flexDirection:"column",gap:2 }}>
+                <div style={{ fontWeight:900,fontSize:28,letterSpacing:"-0.9px",lineHeight:1,display:"flex",alignItems:"center",textShadow:"0 2px 10px rgba(0,0,0,.18)" }}>
+                  <span style={{ color:"#fff" }}>hot</span>
+                  <span style={{ margin:"0 1px",background:"linear-gradient(180deg,#dff1ff 0%,#7ec8ff 55%,#b8e0ff 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",filter:"drop-shadow(0 2px 8px rgba(126,200,255,.28))" }}>IL</span>
+                  <span style={{ color:"#fff" }}>deals</span>
                 </div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,.5)", letterSpacing: "0.07em", textTransform: "uppercase" }}>קהילת הדילים הישראלית</div>
+                <div style={{ fontSize:11,color:"rgba(255,255,255,.72)",fontWeight:700,letterSpacing:".04em" }}>קהילת הדילים הישראלית</div>
               </div>
             </div>
 
             {/* Search */}
-            <div style={{ flex: 1, maxWidth: 580 }} className="desktop-only">
-              <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,.12)", border: "1.5px solid rgba(255,255,255,.18)", borderRadius: 30, padding: "0 18px", backdropFilter: "blur(10px)", transition: "all .2s" }}>
-                <span style={{ color: "rgba(255,255,255,.55)", fontSize: 15, flexShrink: 0 }}>🔍</span>
+            <div style={{ flex: 1, maxWidth: 620 }} className="desktop-only">
+              <div style={{ display:"flex",alignItems:"center",background:"linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.1))",border:"1.5px solid rgba(255,255,255,.22)",borderRadius:32,padding:"0 20px",backdropFilter:"blur(12px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.16),0 10px 30px rgba(0,0,0,.14)",minHeight:52 }}>
+                <span style={{ color:"rgba(255,255,255,.72)",fontSize:16,flexShrink:0 }}>🔍</span>
                 <input
                   placeholder="חפש דילים, מוצרים, חנויות..."
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
-                  style={{ background: "transparent", border: "none", color: "#fff", fontSize: 14, flex: 1, outline: "none", padding: "11px 10px", direction: "rtl", width: "100%" }}
+                  style={{ background:"transparent",border:"none",color:"#fff",fontSize:15,fontWeight:600,flex:1,outline:"none",padding:"14px 12px",direction:"rtl",width:"100%" }}
                 />
               </div>
             </div>
@@ -298,17 +312,19 @@ export default function App() {
           </div>
 
           {/* Category bar */}
-          <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "10px 0 14px", scrollbarWidth: "none", msOverflowStyle: "none" }}>
-            {["הכל", ...categories.map(c => c.name)].map(c => (
-              <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
-                style={{ border: "none", borderRadius: 20, padding: "6px 16px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-                  background: activeCategory === c ? "#fff" : "rgba(255,255,255,.12)",
-                  color: activeCategory === c ? "var(--blue)" : "rgba(255,255,255,.8)",
-                  boxShadow: activeCategory === c ? "0 2px 10px rgba(0,0,0,.15)" : "none",
-                  transition: "var(--tr)" }}>
-                {c}
-              </button>
-            ))}
+          <div style={{ marginTop:10,marginBottom:14,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",borderRadius:18,padding:8,backdropFilter:"blur(8px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.08)" }}>
+            <div style={{ display:"flex",gap:8,overflowX:"auto",scrollbarWidth:"none",msOverflowStyle:"none" }}>
+              {["הכל", ...categories.map(c => c.name)].map(c => (
+                <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
+                  style={{ border:activeCategory===c?"1px solid rgba(255,255,255,.22)":"1px solid transparent",borderRadius:22,padding:"8px 18px",fontSize:13,fontWeight:800,whiteSpace:"nowrap",flexShrink:0,
+                    background:activeCategory===c?"#fff":"rgba(255,255,255,.08)",
+                    color:activeCategory===c?"var(--blue)":"rgba(255,255,255,.88)",
+                    boxShadow:activeCategory===c?"0 8px 22px rgba(0,0,0,.16)":"none",
+                    transition:"var(--tr)" }}>
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </header>
@@ -320,6 +336,40 @@ export default function App() {
           onAdminUpdate={adminUpdateDeal} onAdminDelete={adminDeleteDeal} />
       ) : (
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+
+        {/* Mobile search */}
+        <div className="mobile-only" style={{ marginBottom:12 }}>
+          <div style={{ display:"flex",alignItems:"center",background:"#fff",border:"1.5px solid var(--border)",borderRadius:18,padding:"0 14px",boxShadow:"var(--sh-sm)" }}>
+            <span style={{ color:"var(--text-3)",fontSize:15 }}>🔍</span>
+            <input placeholder="חפש דילים, מוצרים, חנויות..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+              style={{ background:"transparent",border:"none",color:"var(--text)",fontSize:14,flex:1,outline:"none",padding:"13px 10px",direction:"rtl",width:"100%" }} />
+          </div>
+        </div>
+
+        {/* Mobile filter tray */}
+        <div className="mobile-only" style={{ marginBottom:16 }}>
+          <div style={{ background:"var(--surface)",border:"1px solid var(--border)",borderRadius:18,padding:12,boxShadow:"var(--sh)" }}>
+            <div style={{ display:"flex",gap:8,overflowX:"auto",paddingBottom:4,scrollbarWidth:"none" }}>
+              {[["hot","🔥 הכי חמים"],["new","✨ חדשים"]].map(([id,label]) => (
+                <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
+                  style={{ border:"none",borderRadius:999,padding:"9px 14px",fontWeight:800,fontSize:13,whiteSpace:"nowrap",flexShrink:0,
+                    background:activeTab===id?"linear-gradient(135deg,var(--blue-2),var(--blue))":"var(--surface-2)",
+                    color:activeTab===id?"#fff":"var(--text-2)" }}>
+                  {label}
+                </button>
+              ))}
+              {["הכל",...categories.map(c=>c.name)].map(c => (
+                <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
+                  style={{ border:"1px solid var(--border)",borderRadius:999,padding:"9px 14px",fontWeight:800,fontSize:13,whiteSpace:"nowrap",flexShrink:0,
+                    background:activeCategory===c?"var(--blue)":"#fff",
+                    color:activeCategory===c?"#fff":"var(--text-2)" }}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28 }} className="main-grid">
 
           {/* Feed */}
@@ -338,27 +388,50 @@ export default function App() {
             </div>
 
             {loading ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
                 {[1,2,3].map(i => (
-                  <div key={i} style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--border)", padding: 20, height: 140, animation: "pulse 1.5s ease-in-out infinite", opacity: .7 }} />
+                  <div key={i} style={{ background:"var(--surface)",borderRadius:22,border:"1px solid var(--border)",padding:18,boxShadow:"var(--sh-sm)" }}>
+                    <div style={{ display:"flex",gap:18 }}>
+                      <div className="skeleton-shimmer" style={{ width:164,height:128,borderRadius:16,background:"var(--surface-3)",flexShrink:0 }} />
+                      <div style={{ flex:1 }}>
+                        <div className="skeleton-shimmer" style={{ width:"32%",height:20,borderRadius:999,background:"var(--surface-3)",marginBottom:12 }} />
+                        <div className="skeleton-shimmer" style={{ width:"78%",height:16,borderRadius:8,background:"var(--surface-3)",marginBottom:10 }} />
+                        <div className="skeleton-shimmer" style={{ width:"92%",height:14,borderRadius:8,background:"var(--surface-3)",marginBottom:8 }} />
+                        <div className="skeleton-shimmer" style={{ width:"68%",height:14,borderRadius:8,background:"var(--surface-3)",marginBottom:18 }} />
+                        <div className="skeleton-shimmer" style={{ width:"34%",height:30,borderRadius:12,background:"var(--surface-3)" }} />
+                      </div>
+                      <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                        <div className="skeleton-shimmer" style={{ width:72,height:64,borderRadius:16,background:"var(--surface-3)" }} />
+                        <div className="skeleton-shimmer" style={{ width:72,height:64,borderRadius:16,background:"var(--surface-3)" }} />
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : deals.length === 0 ? (
-              <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--border)", textAlign: "center", padding: "60px 24px", boxShadow: "var(--sh)" }}>
-                <div style={{ fontSize: 56, marginBottom: 16, filter: "grayscale(.3)" }}>🔍</div>
-                <div style={{ fontWeight: 800, fontSize: 20, color: "var(--text)", marginBottom: 8 }}>לא נמצאו דילים</div>
-                <div style={{ color: "var(--text-2)", fontSize: 14 }}>נסה לשנות את החיפוש או הקטגוריה</div>
+              <div style={{ background:"linear-gradient(180deg,#fff,#f8faff)",borderRadius:24,border:"1px solid var(--border)",textAlign:"center",padding:"70px 28px",boxShadow:"var(--sh)" }}>
+                <div style={{ width:90,height:90,margin:"0 auto 18px",borderRadius:28,display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,var(--surface-3),#dfe8ff)",fontSize:42,boxShadow:"0 12px 28px rgba(0,28,84,.08)" }}>🔍</div>
+                <div style={{ fontWeight:900,fontSize:24,color:"var(--text)",marginBottom:10 }}>לא נמצאו דילים</div>
+                <div style={{ color:"var(--text-2)",fontSize:15,lineHeight:1.7,maxWidth:380,margin:"0 auto 22px" }}>לא מצאנו תוצאות לחיפוש הזה. נסה לשנות את החיפוש, לעבור קטגוריה, או לפרסם דיל חדש.</div>
+                <div style={{ display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap" }}>
+                  <button className="btn btn-ghost" onClick={() => { setSearch(""); setActiveCategory("הכל"); setPage(1); }} style={{ padding:"12px 16px",borderRadius:12 }}>נקה סינון</button>
+                  <button className="btn btn-primary" onClick={() => user ? setModal("newdeal") : setModal("register")} style={{ padding:"12px 16px",borderRadius:12 }}>
+                    {user ? "שתף דיל חדש" : "הצטרף לקהילה"}
+                  </button>
+                </div>
               </div>
             ) : (
               <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {deals.map(deal => (
-                    <DealCard key={deal.id} deal={deal} currentUser={user}
-                      onVote={vote} onOpen={() => openDeal(deal.id)}
-                      isAdmin={user?.role === "admin"}
-                      onAdminUpdate={adminUpdateDeal}
-                      onAdminDelete={adminDeleteDeal}
-                    />
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {deals.map((deal, index) => (
+                    <div key={deal.id} style={{ animationDelay:`${index * 70}ms` }}>
+                      <DealCard deal={deal} currentUser={user}
+                        onVote={vote} onOpen={() => openDeal(deal.id)}
+                        isAdmin={user?.role === "admin"}
+                        onAdminUpdate={adminUpdateDeal}
+                        onAdminDelete={adminDeleteDeal}
+                      />
+                    </div>
                   ))}
                 </div>
                 {totalPages > 1 && (
@@ -396,37 +469,41 @@ export default function App() {
             )}
 
             {/* Top deals */}
-            <div style={{ background: "var(--surface)", borderRadius: "var(--r)", padding: 20, boxShadow: "var(--sh)", border: "1px solid var(--border)" }}>
-              <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 14, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ background:"var(--surface)",borderRadius:20,padding:20,boxShadow:"var(--sh)",border:"1px solid var(--border)" }}>
+              <div style={{ fontWeight:900,fontSize:16,marginBottom:16,color:"var(--text)",display:"flex",alignItems:"center",gap:8 }}>
                 <span>🏆</span> הכי חמים עכשיו
               </div>
-              {[...deals].sort((a,b)=>(b.hot-b.cold)-(a.hot-a.cold)).slice(0,5).map((d,i)=>(
-                <div key={d.id} onClick={() => openDeal(d.id)}
-                  style={{ display:"flex",gap:10,alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border)",cursor:"pointer",transition:"var(--tr)" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <div style={{ width:28,height:28,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,flexShrink:0,
-                    background: i===0 ? "linear-gradient(135deg,#FFD700,#FFA500)" : i<3 ? "var(--surface-3)" : "var(--bg)",
-                    color: i===0 ? "#fff" : "var(--text-2)" }}>
-                    {i+1}
+              <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                {[...deals].sort((a,b)=>(b.hot-b.cold)-(a.hot-a.cold)).slice(0,5).map((d,i)=>(
+                  <div key={d.id} onClick={() => openDeal(d.id)}
+                    style={{ display:"flex",gap:12,alignItems:"center",padding:12,border:"1px solid var(--border)",borderRadius:16,cursor:"pointer",transition:"var(--tr)",background:"linear-gradient(180deg,#fff,#f8faff)" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 10px 24px rgba(0,28,84,.1)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
+                    <div style={{ width:34,height:34,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:14,flexShrink:0,
+                      background:i===0?"linear-gradient(135deg,#FFD700,#FFA500)":"var(--surface-3)",
+                      color:i===0?"#fff":"var(--text-2)" }}>
+                      {i+1}
+                    </div>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ fontSize:13,fontWeight:800,lineHeight:1.45,color:"var(--text)",marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{d.title}</div>
+                      <div style={{ fontSize:12,color:"var(--hot)",fontWeight:900 }}>₪{(+d.deal_price).toLocaleString()}</div>
+                    </div>
+                    <div style={{ flexShrink:0,background:"rgba(255,69,0,.08)",color:"var(--hot)",borderRadius:999,padding:"6px 9px",fontSize:12,fontWeight:900 }}>
+                      🔥{d.hot-d.cold}
+                    </div>
                   </div>
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ fontSize:12,fontWeight:600,lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--text)" }}>{d.title}</div>
-                    <div style={{ fontSize:12,color:"var(--hot)",fontWeight:800,marginTop:2 }}>₪{(+d.deal_price).toLocaleString()}</div>
-                  </div>
-                  <div style={{ fontSize:11,fontWeight:700,color:"var(--hot)",flexShrink:0 }}>🔥{d.hot-d.cold}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {!user && (
-              <div style={{ background: "linear-gradient(135deg,#002A8A,#0038A8,#0055DD)", borderRadius: "var(--r)", padding: 24, color: "#fff", textAlign: "center", position: "relative", overflow: "hidden" }}>
-                <div style={{ position:"absolute",top:-20,right:-20,fontSize:80,opacity:.08,pointerEvents:"none" }}>🇮🇱</div>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>🇮🇱</div>
-                <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 8 }}>הצטרף לקהילה!</div>
-                <div style={{ fontSize: 13, marginBottom: 20, opacity: 0.8, lineHeight: 1.6 }}>שתף דילים, הצבע, וחסוך כסף בכל קנייה</div>
-                <button className="btn" onClick={() => setModal("register")} style={{ background: "#fff", color: "var(--blue)", width: "100%", fontWeight: 800, padding: "12px", fontSize: 14, borderRadius: 12, boxShadow: "0 4px 14px rgba(0,0,0,.2)" }}>הצטרף בחינם</button>
-                <button className="btn" onClick={() => setModal("login")} style={{ background: "transparent", color: "rgba(255,255,255,.7)", width: "100%", fontSize: 13, marginTop: 8, border: "none" }}>יש לי חשבון →</button>
+              <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8,#0055DD)",borderRadius:22,padding:26,color:"#fff",textAlign:"center",position:"relative",overflow:"hidden",boxShadow:"0 18px 42px rgba(0,28,84,.24)" }}>
+                <div style={{ position:"absolute",top:-18,right:-18,width:110,height:110,borderRadius:"50%",background:"rgba(255,255,255,.06)" }} />
+                <div style={{ fontSize:42,marginBottom:12,position:"relative" }}>🇮🇱</div>
+                <div style={{ fontWeight:900,fontSize:20,marginBottom:8,position:"relative" }}>הצטרף לקהילה!</div>
+                <div style={{ fontSize:14,marginBottom:22,opacity:.86,lineHeight:1.7,position:"relative" }}>שתף דילים, הצבע, שמור מועדפים, וחסוך כסף בכל קנייה</div>
+                <button className="btn" onClick={() => setModal("register")} style={{ background:"#fff",color:"var(--blue)",width:"100%",fontWeight:900,padding:14,fontSize:15,borderRadius:14,boxShadow:"0 10px 24px rgba(0,0,0,.18)" }}>הצטרף בחינם</button>
+                <button className="btn" onClick={() => setModal("login")} style={{ background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.86)",width:"100%",fontSize:13,marginTop:10,border:"1px solid rgba(255,255,255,.15)",borderRadius:14,padding:12 }}>יש לי חשבון</button>
               </div>
             )}
           </div>
@@ -464,11 +541,11 @@ function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, o
   const temp = getTemp(+deal.hot, +deal.cold);
   const discount = pct(+deal.deal_price, +deal.original_price);
   return (
-    <div className={`deal-card${deal.is_featured ? " featured" : ""}${deal.is_expired ? " expired" : ""}`}>
+    <div className={`deal-card deal-entrance${deal.is_featured ? " featured" : ""}${deal.is_expired ? " expired" : ""}`}>
       {/* Temperature accent bar */}
-      <div className="card-accent" style={{ background: `linear-gradient(180deg,${temp.color},${temp.color}66)` }} />
+      <div className="card-accent" style={{ background:`linear-gradient(180deg,${temp.color},${temp.color}66)` }} />
 
-      {/* Header */}
+      {/* Header badges */}
       <div style={{ display:"flex",alignItems:"center",gap:6,padding:"12px 18px 0",flexWrap:"wrap" }}>
         <span className="badge" style={{ background:temp.bg,color:temp.color }}>{temp.label}</span>
         {deal.is_featured && <span className="badge" style={{ background:"#FFF8E1",color:"#D4920A" }}>⭐ מוצגת</span>}
@@ -479,35 +556,39 @@ function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, o
       </div>
 
       {/* Body */}
-      <div style={{ display:"flex",gap:16,padding:"14px 18px",alignItems:"flex-start" }}>
+      <div style={{ display:"flex",gap:18,padding:"16px 18px 18px",alignItems:"stretch" }}>
         {/* Image */}
         <div className="card-img" onClick={onOpen}
-          style={{ width:136,height:110,borderRadius:12,overflow:"hidden",flexShrink:0,cursor:"pointer",background:"var(--surface-3)",boxShadow:"var(--sh-sm)" }}>
+          style={{ width:164,height:128,borderRadius:16,overflow:"hidden",flexShrink:0,cursor:"pointer",background:"var(--surface-3)",boxShadow:"0 8px 22px rgba(0,28,84,.12)" }}>
           <img src={deal.image_url || "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"} alt=""
             style={{ width:"100%",height:"100%",objectFit:"cover" }} />
         </div>
 
         {/* Info */}
-        <div style={{ flex:1,minWidth:0 }}>
-          <h3 onClick={onOpen}
-            style={{ fontWeight:800,fontSize:16,marginBottom:6,cursor:"pointer",lineHeight:1.35,color:"var(--text)",letterSpacing:"-.01em" }}>
-            {deal.title}
-          </h3>
-          <p style={{ fontSize:13,color:"var(--text-2)",marginBottom:12,lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" }}>
-            {deal.description}
-          </p>
+        <div style={{ flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between" }}>
+          <div>
+            <h3 onClick={onOpen}
+              style={{ fontWeight:900,fontSize:18,marginBottom:8,cursor:"pointer",lineHeight:1.45,color:"var(--text)",letterSpacing:"-.02em",transition:"var(--tr)" }}
+              onMouseEnter={e => { e.currentTarget.style.color="var(--blue)"; e.currentTarget.style.transform="translateX(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color="var(--text)"; e.currentTarget.style.transform="translateX(0)"; }}>
+              {deal.title}
+            </h3>
+            <p style={{ fontSize:14,color:"var(--text-2)",marginBottom:14,lineHeight:1.7,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" }}>
+              {deal.description}
+            </p>
+          </div>
           <div style={{ display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
-            <span style={{ fontWeight:900,fontSize:24,color:"var(--hot)",letterSpacing:"-.5px",lineHeight:1 }}>
+            <span style={{ fontWeight:900,fontSize:28,color:"var(--hot)",letterSpacing:"-.6px",lineHeight:1 }}>
               ₪{(+deal.deal_price).toLocaleString()}
             </span>
             {deal.original_price > deal.deal_price && (
-              <span style={{ textDecoration:"line-through",color:"var(--text-3)",fontSize:14 }}>
+              <span style={{ textDecoration:"line-through",color:"var(--text-3)",fontSize:15 }}>
                 ₪{(+deal.original_price).toLocaleString()}
               </span>
             )}
             {discount > 0 && (
-              <span style={{ background:"linear-gradient(135deg,#FF6A00,var(--hot))",color:"#fff",borderRadius:8,padding:"3px 10px",fontSize:12,fontWeight:800,boxShadow:"0 2px 8px rgba(255,69,0,.28)" }}>
-                -{discount}%
+              <span style={{ background:"linear-gradient(135deg,#FF6A00,var(--hot))",color:"#fff",borderRadius:999,padding:"6px 12px",fontSize:13,fontWeight:900,boxShadow:"0 8px 20px rgba(255,69,0,.28)" }}>
+                חיסכון {discount}%-
               </span>
             )}
           </div>
@@ -519,27 +600,31 @@ function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, o
         </div>
 
         {/* Vote column */}
-        <div style={{ display:"flex",flexDirection:"column",gap:8,alignItems:"center",flexShrink:0 }}>
-          <button className="vote-btn vote-hot" onClick={() => onVote(deal.id,"hot")}>
-            🔥<span style={{ fontSize:14,fontWeight:900 }}>{deal.hot}</span>
+        <div style={{ display:"flex",flexDirection:"column",gap:10,alignItems:"center",flexShrink:0 }}>
+          <button className="vote-btn vote-hot" onClick={() => onVote(deal.id,"hot")} style={{ minWidth:72,minHeight:64 }}>
+            <span style={{ fontSize:18,lineHeight:1 }}>🔥</span>
+            <span style={{ fontSize:11,fontWeight:800,lineHeight:1 }}>חם</span>
+            <span style={{ fontSize:18,fontWeight:900,lineHeight:1 }}>{deal.hot}</span>
           </button>
-          <button className="vote-btn vote-cold" onClick={() => onVote(deal.id,"cold")}>
-            🧊<span style={{ fontSize:14,fontWeight:900 }}>{deal.cold}</span>
+          <button className="vote-btn vote-cold" onClick={() => onVote(deal.id,"cold")} style={{ minWidth:72,minHeight:64 }}>
+            <span style={{ fontSize:18,lineHeight:1 }}>🧊</span>
+            <span style={{ fontSize:11,fontWeight:800,lineHeight:1 }}>קר</span>
+            <span style={{ fontSize:18,fontWeight:900,lineHeight:1 }}>{deal.cold}</span>
           </button>
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 18px",borderTop:"1px solid var(--border)",background:"var(--surface-2)",borderRadius:"0 0 var(--r) var(--r)",flexWrap:"wrap" }}>
-        <span style={{ fontSize:12,color:"var(--text-2)",display:"flex",alignItems:"center",gap:5 }}>
+      {/* Footer utility strip */}
+      <div style={{ display:"flex",alignItems:"center",gap:10,padding:"12px 18px",borderTop:"1px solid rgba(0,56,168,.08)",background:"linear-gradient(180deg,rgba(244,247,255,.75),rgba(235,240,253,.9))",borderRadius:"0 0 22px 22px",flexWrap:"wrap" }}>
+        <span style={{ fontSize:12,color:"var(--text-2)",display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:"rgba(255,255,255,.7)",borderRadius:999 }}>
           <span style={{ fontSize:16 }}>{deal.avatar}</span>
-          <span style={{ fontWeight:600 }}>{deal.username}</span>
+          <span style={{ fontWeight:700 }}>{deal.username}</span>
         </span>
-        <button onClick={onOpen} style={{ fontSize:12,color:"var(--text-2)",background:"none",border:"none",display:"flex",alignItems:"center",gap:4,fontWeight:600,cursor:"pointer" }}>
+        <button onClick={onOpen} style={{ fontSize:12,color:"var(--text-2)",background:"rgba(255,255,255,.7)",border:"none",borderRadius:999,display:"flex",alignItems:"center",gap:6,fontWeight:700,cursor:"pointer",padding:"6px 10px" }}>
           💬 {deal.comment_count}
         </button>
         <a href={deal.url} target="_blank" rel="noreferrer"
-          style={{ fontSize:12,color:"var(--blue)",fontWeight:700,display:"flex",alignItems:"center",gap:4,textDecoration:"none" }}>
+          style={{ fontSize:12,color:"#fff",fontWeight:800,display:"flex",alignItems:"center",gap:6,textDecoration:"none",background:"linear-gradient(135deg,var(--blue-2),var(--blue))",borderRadius:999,padding:"7px 12px",boxShadow:"0 8px 18px rgba(0,56,168,.22)" }}>
           🛒 לחנות
         </a>
         {isAdmin && (
@@ -555,102 +640,19 @@ function DealCard({ deal, currentUser, onVote, onOpen, isAdmin, onAdminUpdate, o
   );
 }
 
-// ─── Deal Modal ───────────────────────────────────────────────────────────────
-function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
-  const [comment, setComment] = useState("");
-  const temp = getTemp(+deal.hot, +deal.cold);
-  const discount = pct(+deal.deal_price, +deal.original_price);
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth: 680 }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20 }}>
-          <div style={{ display:"flex",gap:8 }}>
-            <span className="badge" style={{ background:temp.bg,color:temp.color }}>{temp.label}</span>
-            <span className="badge" style={{ background:"#f0f4ff",color:"var(--mid)" }}>{deal.category}</span>
-          </div>
-          <button onClick={onClose} style={{ background:"none",border:"none",fontSize:24,color:"var(--mid)",lineHeight:1,cursor:"pointer" }}>×</button>
-        </div>
-        <img src={deal.image_url || "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80"} alt="" style={{ width:"100%",height:220,objectFit:"cover",borderRadius:14,marginBottom:16 }} />
-        <h2 style={{ fontWeight:900,fontSize:22,marginBottom:10,lineHeight:1.3 }}>{deal.title}</h2>
-        <p style={{ color:"var(--mid)",fontSize:15,lineHeight:1.7,marginBottom:16 }}>{deal.description}</p>
-        <div style={{ display:"flex",alignItems:"center",gap:16,marginBottom:20,flexWrap:"wrap" }}>
-          <div>
-            <div style={{ fontSize:12,color:"var(--mid)",marginBottom:2 }}>מחיר עסקה</div>
-            <div style={{ fontWeight:900,fontSize:32,color:"var(--orange)" }}>₪{(+deal.deal_price).toLocaleString()}</div>
-          </div>
-          {deal.original_price > deal.deal_price && (
-            <div>
-              <div style={{ fontSize:12,color:"var(--mid)",marginBottom:2 }}>מחיר מקורי</div>
-              <div style={{ textDecoration:"line-through",fontSize:20,color:"#aaa" }}>₪{(+deal.original_price).toLocaleString()}</div>
-            </div>
-          )}
-          {discount > 0 && <div style={{ background:"var(--orange)",color:"#fff",borderRadius:12,padding:"8px 16px",fontSize:18,fontWeight:900 }}>חיסכון {discount}%</div>}
-        </div>
-        <div style={{ display:"flex",gap:12,marginBottom:20,padding:16,background:"#fafafa",borderRadius:14 }}>
-          <button className="vote-btn vote-hot" style={{ flex:1 }} onClick={() => onVote(deal.id,"hot")}>🔥 חם! <span style={{ fontSize:18,fontWeight:900 }}>{deal.hot}</span></button>
-          <button className="vote-btn vote-cold" style={{ flex:1 }} onClick={() => onVote(deal.id,"cold")}>🧊 קר <span style={{ fontSize:18,fontWeight:900 }}>{deal.cold}</span></button>
-          <a href={deal.url} target="_blank" rel="noreferrer">
-            <button className="btn btn-primary">🛒 לחנות</button>
-          </a>
-        </div>
-        {/* Progress bar */}
-        <div style={{ marginBottom:20 }}>
-          <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--mid)",marginBottom:4 }}>
-            <span>🔥 חם ({deal.hot})</span><span>🧊 קר ({deal.cold})</span>
-          </div>
-          <div style={{ height:6,borderRadius:3,background:"#eee",overflow:"hidden" }}>
-            <div style={{ height:"100%",borderRadius:3,transition:".5s",width:`${Math.round(+deal.hot/Math.max(+deal.hot+ +deal.cold,1)*100)}%`,background:"linear-gradient(to right,#ff6b00,#ff2d2d)" }} />
-          </div>
-        </div>
-        {/* Comments */}
-        <div>
-          <div style={{ fontWeight:800,fontSize:16,marginBottom:14 }}>💬 תגובות ({deal.comments?.length || 0})</div>
-          <div style={{ maxHeight:220,overflowY:"auto",marginBottom:14 }}>
-            {!deal.comments?.length && <div style={{ color:"var(--mid)",textAlign:"center",padding:24,fontSize:14 }}>היה הראשון להגיב! 🎤</div>}
-            {deal.comments?.map(c => (
-              <div key={c.id} style={{ display:"flex",gap:10,marginBottom:14 }}>
-                <span style={{ fontSize:24,flexShrink:0 }}>{c.avatar}</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:4 }}>
-                    <span style={{ fontWeight:700,fontSize:13 }}>{c.username}</span>
-                    <span style={{ color:"#aaa",fontSize:11 }}>{timeAgo(c.created_at)}</span>
-                  </div>
-                  <div style={{ background:"#f4f5f7",borderRadius:10,padding:"8px 12px",fontSize:14 }}>{c.text}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {currentUser ? (
-            <div style={{ display:"flex",gap:10 }}>
-              <span style={{ fontSize:24,flexShrink:0 }}>{currentUser.avatar}</span>
-              <div style={{ flex:1,display:"flex",gap:8 }}>
-                <input value={comment} onChange={e => setComment(e.target.value)} onKeyDown={e => e.key==="Enter" && (onComment(deal.id,comment),setComment(""))} placeholder="כתוב תגובה..." style={{ flex:1 }} />
-                <button className="btn btn-primary" onClick={() => { onComment(deal.id,comment); setComment(""); }} style={{ padding:"10px 16px" }}>שלח</button>
-              </div>
-            </div>
-          ) : (
-            <div style={{ background:"#f0f5ff",border:"1px dashed var(--blue)",borderRadius:12,padding:14,textAlign:"center",fontSize:14,color:"var(--mid)" }}>
-              🔐 התחבר כדי להוסיף תגובה
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Auth Modals ──────────────────────────────────────────────────────────────
 function LoginModal({ onLogin, onClose, onRegister }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth:420,padding:0,overflow:"hidden" }}>
-        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8,#0055DD)",padding:"32px 36px 28px",textAlign:"center",position:"relative" }}>
-          <button onClick={onClose} style={{ position:"absolute",top:16,left:16,background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,fontSize:18,cursor:"pointer",lineHeight:"32px" }}>×</button>
-          <div style={{ fontSize:44,marginBottom:10 }}>🇮🇱</div>
-          <h2 style={{ fontWeight:900,fontSize:24,color:"#fff",marginBottom:4 }}>ברוך הבא!</h2>
-          <p style={{ color:"rgba(255,255,255,.7)",fontSize:13 }}>התחבר כדי להצביע ולשתף דילים</p>
+      <div className="modal-box" style={{ maxWidth:420,padding:0,overflow:"hidden",borderRadius:26,border:"1px solid rgba(255,255,255,.14)",boxShadow:"0 24px 80px rgba(0,0,0,.28),0 2px 10px rgba(0,0,0,.12)" }}>
+        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8,#0055DD)",padding:"34px 36px 30px",textAlign:"center",position:"relative" }}>
+          <div style={{ position:"absolute",inset:0,background:"radial-gradient(circle at top right,rgba(255,255,255,.14),transparent 36%)" }} />
+          <button onClick={onClose} style={{ position:"absolute",top:16,left:16,background:"rgba(255,255,255,.16)",border:"1px solid rgba(255,255,255,.14)",color:"#fff",borderRadius:10,width:36,height:36,fontSize:18,cursor:"pointer",lineHeight:"36px",backdropFilter:"blur(8px)" }}>×</button>
+          <div style={{ fontSize:44,marginBottom:10,position:"relative" }}>🇮🇱</div>
+          <h2 style={{ fontWeight:900,fontSize:24,color:"#fff",marginBottom:4,position:"relative" }}>ברוך הבא!</h2>
+          <p style={{ color:"rgba(255,255,255,.7)",fontSize:13,position:"relative" }}>התחבר כדי להצביע ולשתף דילים</p>
         </div>
         <div style={{ padding:"28px 36px 32px" }}>
           <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
@@ -674,12 +676,13 @@ function RegisterModal({ onRegister, onClose, onLogin }) {
   const [password, setPassword] = useState("");
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth:420,padding:0,overflow:"hidden" }}>
-        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8,#0055DD)",padding:"32px 36px 28px",textAlign:"center",position:"relative" }}>
-          <button onClick={onClose} style={{ position:"absolute",top:16,left:16,background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,fontSize:18,cursor:"pointer",lineHeight:"32px" }}>×</button>
-          <div style={{ fontSize:44,marginBottom:10 }}>🎉</div>
-          <h2 style={{ fontWeight:900,fontSize:24,color:"#fff",marginBottom:4 }}>הצטרף לקהילה</h2>
-          <p style={{ color:"rgba(255,255,255,.7)",fontSize:13 }}>חינם לגמרי · דילים חמים · חיסכון אמיתי</p>
+      <div className="modal-box" style={{ maxWidth:420,padding:0,overflow:"hidden",borderRadius:26,border:"1px solid rgba(255,255,255,.14)",boxShadow:"0 24px 80px rgba(0,0,0,.28),0 2px 10px rgba(0,0,0,.12)" }}>
+        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8,#0055DD)",padding:"34px 36px 30px",textAlign:"center",position:"relative" }}>
+          <div style={{ position:"absolute",inset:0,background:"radial-gradient(circle at top right,rgba(255,255,255,.14),transparent 36%)" }} />
+          <button onClick={onClose} style={{ position:"absolute",top:16,left:16,background:"rgba(255,255,255,.16)",border:"1px solid rgba(255,255,255,.14)",color:"#fff",borderRadius:10,width:36,height:36,fontSize:18,cursor:"pointer",lineHeight:"36px",backdropFilter:"blur(8px)" }}>×</button>
+          <div style={{ fontSize:44,marginBottom:10,position:"relative" }}>🎉</div>
+          <h2 style={{ fontWeight:900,fontSize:24,color:"#fff",marginBottom:4,position:"relative" }}>הצטרף לקהילה</h2>
+          <p style={{ color:"rgba(255,255,255,.7)",fontSize:13,position:"relative" }}>חינם לגמרי · דילים חמים · חיסכון אמיתי</p>
         </div>
         <div style={{ padding:"28px 36px 32px" }}>
           <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
@@ -823,12 +826,20 @@ function DealPage({ deal, currentUser, onVote, onComment, onBack, isAdmin, onAdm
               ))}
             </div>
             {currentUser ? (
-              <div style={{ display:"flex",gap:12,alignItems:"center" }}>
-                <span style={{ fontSize:30,flexShrink:0 }}>{currentUser.avatar}</span>
-                <input value={comment} onChange={e => setComment(e.target.value)}
-                  onKeyDown={e => e.key==="Enter" && comment.trim() && (onComment(deal.id,comment),setComment(""))}
-                  placeholder="כתוב תגובה..." style={{ flex:1 }} />
-                <button className="btn btn-primary" onClick={() => { onComment(deal.id,comment); setComment(""); }} style={{ padding:"11px 20px",flexShrink:0 }}>שלח</button>
+              <div style={{ display:"flex",gap:12,alignItems:"flex-start",background:"linear-gradient(180deg,rgba(244,247,255,1),rgba(235,240,253,.9))",border:"1px solid var(--border)",borderRadius:18,padding:14,marginTop:8 }}>
+                <span style={{ fontSize:28,flexShrink:0,width:44,height:44,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",background:"#fff",boxShadow:"var(--sh-sm)" }}>
+                  {currentUser.avatar}
+                </span>
+                <div style={{ flex:1,display:"flex",flexDirection:"column",gap:10 }}>
+                  <input value={comment} onChange={e => setComment(e.target.value)}
+                    onKeyDown={e => e.key==="Enter" && comment.trim() && (onComment(deal.id,comment),setComment(""))}
+                    placeholder="כתוב תגובה..."
+                    style={{ width:"100%",minHeight:48,background:"#fff",border:"1.5px solid rgba(0,56,168,.12)",borderRadius:14,padding:"12px 14px",fontSize:14 }} />
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                    <span style={{ fontSize:12,color:"var(--text-3)" }}>Enter לשליחה מהירה</span>
+                    <button className="btn btn-primary" onClick={() => { onComment(deal.id,comment); setComment(""); }} style={{ padding:"10px 18px",borderRadius:12 }}>שלח</button>
+                  </div>
+                </div>
               </div>
             ) : (
               <div style={{ background:"var(--surface-2)",border:"1.5px dashed var(--border-2)",borderRadius:14,padding:16,textAlign:"center",fontSize:14,color:"var(--text-2)" }}>
