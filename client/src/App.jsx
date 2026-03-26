@@ -930,6 +930,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
   // Hunter state
   const [hunting,      setHunting]      = useState(false);
   const [huntResult,   setHuntResult]   = useState(null);
+  const [huntingSource, setHuntingSource] = useState(null); // source id being hunted
   const [sources,      setSources]      = useState([]);
   const [srcLoaded,    setSrcLoaded]    = useState(false);
   const [newSrc,       setNewSrc]       = useState({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
@@ -975,6 +976,17 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     finally { setHunting(false); }
   };
 
+  const runSourceNow = async (id) => {
+    setHuntingSource(id); setHuntResult(null);
+    try {
+      const result = await hunterAPI.runSource(id);
+      setHuntResult(result);
+      setLogsLoaded(false);
+    }
+    catch (e) { setHuntResult({ error: e.message }); }
+    finally { setHuntingSource(null); }
+  };
+
   const toggleSource = async (id, cur) => {
     await hunterAPI.toggleSource(id, cur ? 0 : 1);
     setSources(s => s.map(x => x.id === id ? { ...x, is_active: cur ? 0 : 1 } : x));
@@ -998,33 +1010,6 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     finally { setAiSaving(false); }
   };
 
-  const PROMPT_PRESETS = [
-    {
-      label: "סטנדרטי",
-      desc: "חילוץ דילים רגיל",
-      prompt: `אתה עוזר שמחלץ עסקאות ודילים מתוך טקסט של דף אינטרנט מהחנות {store}.\nחלץ את כל העסקאות שמוזכרות בטקסט. עבור כל עסקה, החזר אובייקט JSON עם השדות:\n- title: שם המוצר\n- description: תיאור קצר בעברית\n- deal_price: מחיר מבצע (מספר בלבד, ללא סימן ₪)\n- original_price: מחיר מקורי אם קיים (מספר, אחרת null)\n- url: קישור לעמוד המוצר אם קיים\n\nהחזר רק מערך JSON תקין בפורמט: [{...}, {...}]\nאם אין עסקאות, החזר [].`,
-    },
-    {
-      label: "אגרסיבי",
-      desc: "מוצא כמה שיותר דילים",
-      prompt: `אתה סוכן AI שמחפש כל עסקה אפשרית בדף החנות {store}.\nחלץ כל מוצר שיש לו מחיר — גם אם לא מדובר במבצע ברור. כלול מוצרים בהנחה, חיסול מלאי, מחירים מיוחדים.\nהחזר מערך JSON עם כמה שיותר פריטים בפורמט:\n[{"title":"...","description":"...","deal_price":0,"original_price":null,"url":"..."}]\nהחזר רק את ה-JSON, ללא הסברים.`,
-    },
-    {
-      label: "חיסכון מקסימלי",
-      desc: "רק דילים עם הנחה ≥20%",
-      prompt: `אתה מומחה דילים שמחפש בלעדית עסקאות עם הנחה של 20% ומעלה מהחנות {store}.\nחלץ רק מוצרים שיש להם מחיר מקורי ומחיר מבצע, כאשר ההנחה לפחות 20%.\nחשב: discount = (1 - deal_price/original_price) * 100\nהחזר JSON בלבד:\n[{"title":"...","description":"...","deal_price":0,"original_price":0,"url":"..."}]`,
-    },
-    {
-      label: "אלקטרוניקה",
-      desc: "מתמקד בגאדג׳טים וטכנולוגיה",
-      prompt: `אתה מומחה טכנולוגיה שמחפש דילים על אלקטרוניקה וגאדג׳טים בחנות {store}.\nחלץ רק מוצרי טכנולוגיה: סמארטפונים, מחשבים, אוזניות, מסכים, רכיבים, אביזרי מחשב ומוצרי חשמל.\nהחזר JSON בלבד:\n[{"title":"...","description":"תיאור טכני קצר","deal_price":0,"original_price":null,"url":"..."}]`,
-    },
-    {
-      label: "אגרגטור דילים",
-      desc: "לאתרים כמו bee.deals — מסנן לפי פופולריות",
-      prompt: `אתה סוכן שמחלץ דילים מאתר קהילתי בשם {store}.\nאתרים אלו מציגים דילים שמשתמשים שיתפו, עם הצבעות ותגובות.\n\nכלול רק דילים עם לפחות {min_votes} הצבעות ו-{min_comments} תגובות.\n\nעבור כל דיל חלץ:\n- title: שם המוצר\n- description: תיאור קצר\n- deal_price: מחיר מבצע (מספר)\n- original_price: מחיר מקורי אם קיים (מספר, אחרת null)\n- url: קישור לדיל\n- votes: מספר הצבעות/upvotes (מספר, 0 אם לא נמצא)\n- comments: מספר תגובות (מספר, 0 אם לא נמצא)\n- hours_ago: גיל הדיל בשעות (מספר, 0 אם לא ידוע)\n\nהחזר JSON בלבד:\n[{"title":"...","description":"...","deal_price":0,"original_price":null,"url":"...","votes":0,"comments":0,"hours_ago":0}]`,
-    },
-  ];
 
   const TABS = [
     { id:'overview', icon:'📊', label:'סקירה' },
@@ -1191,8 +1176,23 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
           {/* ── SOURCES ── */}
           {tab==="sources" && (
             <div>
-              <div style={{ fontWeight:900,fontSize:18,color:"var(--text)",marginBottom:6 }}>🌐 מקורות סריקה</div>
-              <div style={{ fontSize:13,color:"var(--text-2)",marginBottom:20 }}>הגדר אילו אתרים ה-AI יסרוק לדילים חדשים</div>
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
+                <div style={{ fontWeight:900,fontSize:18,color:"var(--text)" }}>🌐 מקורות סריקה</div>
+                <button className="btn" onClick={runHunterNow} disabled={hunting || !!huntingSource}
+                  style={{ background:"linear-gradient(135deg,#002A8A,#0047CC)",color:"#fff",padding:"9px 20px",fontSize:13,border:"none" }}>
+                  {hunting ? "🔍 סורק הכל..." : "▶ הרץ הכל"}
+                </button>
+              </div>
+              <div style={{ fontSize:13,color:"var(--text-2)",marginBottom:12 }}>הגדר אילו אתרים ה-AI יסרוק לדילים חדשים</div>
+              {huntResult && !huntResult.error && (
+                <div style={{ marginBottom:14,padding:"10px 16px",borderRadius:10,background:"rgba(0,200,100,.12)",fontSize:13,color:"var(--success)",fontWeight:700 }}>
+                  ✅ נמצאו {huntResult.found} דילים · {huntResult.skipped} כפולים · {huntResult.duration}s
+                  {huntResult.errors?.length > 0 && <span style={{ color:"var(--danger)",marginRight:8 }}> · ⚠️ {huntResult.errors.length} שגיאות</span>}
+                </div>
+              )}
+              {huntResult?.error && (
+                <div style={{ marginBottom:14,padding:"10px 16px",borderRadius:10,background:"rgba(255,0,0,.1)",fontSize:13,color:"var(--danger)",fontWeight:700 }}>❌ {huntResult.error}</div>
+              )}
 
               {/* Add form */}
               <div style={{ background:"var(--surface-2)",borderRadius:14,padding:18,marginBottom:20,border:"1px solid var(--border)" }}>
@@ -1247,6 +1247,13 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                       style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
                         background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
                       {src.is_active ? "● פעיל" : "○ מושהה"}
+                    </button>
+                    <button
+                      onClick={() => runSourceNow(src.id)}
+                      disabled={huntingSource === src.id || hunting}
+                      style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                        background:"linear-gradient(135deg,#002A8A,#0047CC)",color:"#fff",opacity:(huntingSource===src.id||hunting)?0.6:1 }}>
+                      {huntingSource === src.id ? "🔍..." : "▶ הרץ"}
                     </button>
                     <button className="btn btn-danger" style={{ padding:"5px 9px",fontSize:12 }} onClick={() => deleteSource(src.id)}>🗑️</button>
                   </div>
@@ -1345,32 +1352,6 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                     </div>
                   </div>
 
-                  {/* System prompt + presets */}
-                  <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,border:"1px solid var(--border)" }}>
-                    <div style={{ fontWeight:800,fontSize:14,color:"var(--text)",marginBottom:6 }}>📝 System Prompt</div>
-                    <div style={{ fontSize:12,color:"var(--text-2)",marginBottom:12 }}>
-                      השתמש ב-<code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{store}'}</code> כדי להכניס את שם החנות בצורה דינמית
-                    </div>
-
-                    {/* Preset buttons */}
-                    <div style={{ marginBottom:14 }}>
-                      <div style={{ fontSize:12,fontWeight:700,color:"var(--text-2)",marginBottom:8 }}>תבניות מוכנות — לחץ להחלה:</div>
-                      <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-                        {PROMPT_PRESETS.map(p => (
-                          <button key={p.label} onClick={() => setAiConfig(c=>({...c,system_prompt:p.prompt}))}
-                            style={{ padding:"6px 14px",borderRadius:20,border:"1.5px solid var(--border-2)",background:"var(--surface)",color:"var(--text)",fontSize:12,fontWeight:700,cursor:"pointer",transition:"var(--tr)" }}
-                            onMouseEnter={e=>{e.currentTarget.style.background="var(--blue)";e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor="var(--blue)";}}
-                            onMouseLeave={e=>{e.currentTarget.style.background="var(--surface)";e.currentTarget.style.color="var(--text)";e.currentTarget.style.borderColor="var(--border-2)";}}>
-                            {p.label}
-                            <span style={{ fontWeight:400,color:"inherit",opacity:.7,marginRight:4 }}> — {p.desc}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <textarea value={aiConfig.system_prompt||''} onChange={e=>setAiConfig(c=>({...c,system_prompt:e.target.value}))}
-                      rows={12} style={{ ...inputStyle,resize:"vertical",lineHeight:1.6,fontFamily:"monospace",fontSize:12 }} />
-                  </div>
 
                   {/* Save + Run */}
                   <div style={{ display:"flex",alignItems:"center",gap:14,flexWrap:"wrap" }}>

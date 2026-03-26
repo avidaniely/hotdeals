@@ -37,7 +37,7 @@ async function extractDealsWithAI(pageText, source, config) {
   const apiKey = config.ai_api_key || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('No AI API key configured');
 
-  const basePrompt = source.custom_prompt || config.system_prompt || '';
+  const basePrompt = source.custom_prompt || '';
   const prompt = basePrompt
     .replace('{store}', source.store)
     .replace('{min_votes}', config.min_votes || '5')
@@ -114,7 +114,7 @@ async function submitDeal(deal, source, categoryId, adminId, db) {
 }
 
 // ── Main runner ───────────────────────────────────────────────
-async function runHunter(db, triggeredBy = 'auto') {
+async function runHunter(db, triggeredBy = 'auto', sourceId = null) {
   const startTime = Date.now();
   console.log('🤖 Deal Hunter started at', new Date().toLocaleString('he-IL'));
 
@@ -126,12 +126,13 @@ async function runHunter(db, triggeredBy = 'auto') {
   const [[admin]] = await db.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (!admin) return { found: 0, errors: ['No admin user found'], duration: 0 };
 
-  const [sources] = await db.execute(`
-    SELECT hs.*, hp.prompt_text AS custom_prompt
-    FROM hunter_sources hs
-    LEFT JOIN hunter_prompts hp ON hp.id = hs.prompt_id
-    WHERE hs.is_active = 1
-  `);
+  const [sources] = await db.execute(
+    `SELECT hs.*, hp.prompt_text AS custom_prompt
+     FROM hunter_sources hs
+     LEFT JOIN hunter_prompts hp ON hp.id = hs.prompt_id
+     WHERE hs.is_active = 1${sourceId ? ' AND hs.id = ?' : ''}`,
+    sourceId ? [sourceId] : []
+  );
   if (!sources.length) {
     return { found: 0, skipped: 0, errors: ['No active sources configured'], duration: 0 };
   }

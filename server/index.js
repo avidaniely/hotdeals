@@ -560,10 +560,21 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
 //  DEAL HUNTER
 // ════════════════════════════════════════════════════════════
 
-// POST /api/admin/hunt  — trigger manually from admin panel
+// POST /api/admin/hunt  — trigger manually (all sources)
 app.post('/api/admin/hunt', adminAuth, async (req, res) => {
   try {
     const result = await runHunter(db, 'manual');
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/admin/hunt/:id  — trigger a single source
+app.post('/api/admin/hunt/:id', adminAuth, async (req, res) => {
+  try {
+    const result = await runHunter(db, 'manual', req.params.id);
     res.json(result);
   } catch (e) {
     console.error(e);
@@ -671,7 +682,7 @@ app.get('/api/admin/hunter-config', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/hunter-config  — upsert one or more keys
 app.patch('/api/admin/hunter-config', adminAuth, async (req, res) => {
-  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','system_prompt','min_votes','min_comments'];
+  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','min_votes','min_comments'];
   const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
   if (!entries.length) return res.status(400).json({ error: 'no valid keys' });
   for (const [key, value] of entries) {

@@ -96,6 +96,7 @@ export const hunterAPI = {
   toggleSource: (id, is_active)       => api(`/admin/sources/${id}`, { method: 'PATCH', body: { is_active } }),
   deleteSource: (id)                  => api(`/admin/sources/${id}`, { method: 'DELETE' }),
   run:          ()                    => api('/admin/hunt', { method: 'POST' }),
+  runSource:    (id)                  => api(`/admin/hunt/${id}`, { method: 'POST' }),
   getConfig:    ()                    => api('/admin/hunter-config'),
   saveConfig:   (body)                => api('/admin/hunter-config', { method: 'PATCH', body }),
   getLogs:      ()                    => api('/admin/hunter-logs'),
