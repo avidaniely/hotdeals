@@ -4,7 +4,7 @@
 // ============================================================
 import { useState, useEffect, useCallback } from "react";
 import {
-  authAPI, dealsAPI, commentsAPI, categoriesAPI, adminAPI,
+  authAPI, dealsAPI, commentsAPI, categoriesAPI, adminAPI, hunterAPI,
   saveToken, clearToken, getToken,
 } from "./api";
 
@@ -442,6 +442,7 @@ export default function App() {
         <AdminPanel
           tab={adminTab} onTab={setAdminTab}
           deals={adminDeals} users={adminUsers} stats={adminStats}
+          categories={categories}
           onClose={() => setModal(null)}
           onUpdate={adminUpdateDeal}
           onDelete={adminDeleteDeal}
@@ -901,30 +902,102 @@ function DealPage({ deal, currentUser, onVote, onComment, onBack, isAdmin, onAdm
 }
 
 // ─── Admin Panel ──────────────────────────────────────────────────────────────
-function AdminPanel({ tab, onTab, deals, users, stats, onClose, onUpdate, onDelete, onBanUser }) {
+function AdminPanel({ tab, onTab, deals, users, stats, categories, onClose, onUpdate, onDelete, onBanUser }) {
+  const [hunting,     setHunting]     = useState(false);
+  const [huntResult,  setHuntResult]  = useState(null);
+  const [sources,     setSources]     = useState([]);
+  const [srcLoaded,   setSrcLoaded]   = useState(false);
+  const [newSrc,      setNewSrc]      = useState({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
+  const [addingSource,setAddingSource]= useState(false);
+
+  // Load sources when sources tab is opened
+  useEffect(() => {
+    if (tab === 'sources' && !srcLoaded) {
+      hunterAPI.getSources().then(r => { setSources(r); setSrcLoaded(true); }).catch(() => {});
+    }
+  }, [tab, srcLoaded]);
+
+  const runHunter = async () => {
+    setHunting(true);
+    setHuntResult(null);
+    try {
+      const data = await hunterAPI.run();
+      setHuntResult(data);
+    } catch (e) {
+      setHuntResult({ error: e.message });
+    } finally {
+      setHunting(false);
+    }
+  };
+
+  const toggleSource = async (id, cur) => {
+    await hunterAPI.toggleSource(id, cur ? 0 : 1);
+    setSources(s => s.map(x => x.id === id ? { ...x, is_active: cur ? 0 : 1 } : x));
+  };
+
+  const deleteSource = async (id) => {
+    await hunterAPI.deleteSource(id);
+    setSources(s => s.filter(x => x.id !== id));
+  };
+
+  const addSource = async () => {
+    if (!newSrc.name || !newSrc.url || !newSrc.store) return;
+    setAddingSource(true);
+    try {
+      const created = await hunterAPI.addSource(newSrc);
+      setSources(s => [created, ...s]);
+      setNewSrc({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
+    } finally {
+      setAddingSource(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth:780,maxHeight:"90vh" }}>
+      <div className="modal-box" style={{ maxWidth:800,maxHeight:"90vh" }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
-          <div><h2 style={{ fontWeight:900,fontSize:22 }}>⚙️ פאנל ניהול</h2></div>
-          <button onClick={onClose} style={{ background:"none",border:"none",fontSize:24,cursor:"pointer" }}>×</button>
+          <h2 style={{ fontWeight:900,fontSize:22,color:"var(--text)" }}>⚙️ פאנל ניהול</h2>
+          <button onClick={onClose} style={{ background:"none",border:"none",fontSize:24,cursor:"pointer",color:"var(--text-2)" }}>×</button>
         </div>
 
         {stats && (
-          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20 }}>
-            {[["📋 דילים",stats.total_deals,"#fff5f0","var(--orange)"],["⏳ ממתינים",stats.pending,"#fff0f0","var(--red)"],["👥 משתמשים",stats.total_users,"#f0f8ff","var(--blue)"],["⭐ מוצגים",stats.featured,"#fffdf0","#f59c00"]].map(([l,v,bg,c])=>(
-              <div key={l} style={{ background:bg,borderRadius:12,padding:14,textAlign:"center" }}>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16 }}>
+            {[["📋 דילים",stats.total_deals,"var(--surface-2)","var(--blue)"],["⏳ ממתינים",stats.pending,"#FFF0F0","var(--danger)"],["👥 משתמשים",stats.total_users,"var(--surface-2)","var(--blue)"],["⭐ מוצגים",stats.featured,"#FFFBF0","var(--warn)"]].map(([l,v,bg,c])=>(
+              <div key={l} style={{ background:bg,borderRadius:12,padding:14,textAlign:"center",border:"1px solid var(--border)" }}>
                 <div style={{ fontSize:22,fontWeight:900,color:c }}>{v}</div>
-                <div style={{ fontSize:12,color:"var(--mid)",marginTop:2 }}>{l}</div>
+                <div style={{ fontSize:11,color:"var(--text-2)",marginTop:3 }}>{l}</div>
               </div>
             ))}
           </div>
         )}
 
-        <div style={{ display:"flex",gap:4,background:"#f4f5f7",borderRadius:10,padding:4,marginBottom:20 }}>
-          {[["deals","📋 דילים"],["pending","⏳ ממתינים"],["users","👥 משתמשים"]].map(([id,label])=>(
-            <button key={id} onClick={() => onTab(id)} style={{ flex:1,border:"none",borderRadius:8,padding:"8px 12px",fontWeight:700,fontSize:13,
-              background:tab===id?"#fff":"transparent",color:tab===id?"var(--orange)":"var(--mid)",boxShadow:tab===id?"var(--shadow)":"none" }}>
+        {/* Deal Hunter */}
+        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8)",borderRadius:14,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap" }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:800,fontSize:15,color:"#fff",marginBottom:3 }}>🤖 Deal Hunter</div>
+            <div style={{ fontSize:12,color:"rgba(255,255,255,.65)" }}>סורק חנויות ישראליות עם AI ומוצא דילים חדשים · רץ אוטומטית כל 6 שעות</div>
+          </div>
+          <button className="btn" onClick={runHunter} disabled={hunting}
+            style={{ background:"rgba(255,255,255,.15)",color:"#fff",border:"1.5px solid rgba(255,255,255,.3)",padding:"9px 20px",fontSize:13,flexShrink:0,opacity:hunting?.6:1 }}>
+            {hunting ? "🔍 סורק..." : "▶ הרץ עכשיו"}
+          </button>
+          {huntResult && !huntResult.error && (
+            <div style={{ width:"100%",background:"rgba(255,255,255,.1)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#fff",display:"flex",gap:16,flexWrap:"wrap" }}>
+              <span>✅ נמצאו: <strong>{huntResult.found}</strong></span>
+              <span>⏭ כפולים: <strong>{huntResult.skipped}</strong></span>
+              <span>⏱ זמן: <strong>{huntResult.duration}s</strong></span>
+              {huntResult.errors?.length > 0 && <span style={{ color:"#ffaaaa" }}>⚠️ {huntResult.errors.length} שגיאות</span>}
+            </div>
+          )}
+          {huntResult?.error && (
+            <div style={{ width:"100%",background:"rgba(255,0,0,.2)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#ffcccc" }}>❌ {huntResult.error}</div>
+          )}
+        </div>
+
+        <div style={{ display:"flex",gap:4,background:"var(--surface-2)",borderRadius:10,padding:4,marginBottom:20 }}>
+          {[["deals","📋 דילים"],["pending","⏳ ממתינים"],["users","👥 משתמשים"],["sources","🤖 מקורות"]].map(([id,label])=>(
+            <button key={id} onClick={() => onTab(id)} style={{ flex:1,border:"none",borderRadius:8,padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",transition:"var(--tr)",
+              background:tab===id?"var(--surface)":"transparent",color:tab===id?"var(--blue)":"var(--text-2)",boxShadow:tab===id?"var(--sh-sm)":"none" }}>
               {label}{id==="pending"&&stats?.pending>0?` (${stats.pending})`:""}
             </button>
           ))}
@@ -968,6 +1041,53 @@ function AdminPanel({ tab, onTab, deals, users, stats, onClose, onUpdate, onDele
               )}
             </div>
           ))}
+
+          {tab==="sources" && (
+            <div>
+              {/* Add new source form */}
+              <div style={{ background:"var(--surface-2)",borderRadius:12,padding:16,marginBottom:16,border:"1px solid var(--border)" }}>
+                <div style={{ fontWeight:700,fontSize:14,marginBottom:12,color:"var(--text)" }}>הוסף מקור חדש</div>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8 }}>
+                  <input placeholder="שם (KSP, Bug...)" value={newSrc.name} onChange={e=>setNewSrc(s=>({...s,name:e.target.value}))}
+                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }} />
+                  <input placeholder="חנות (KSP)" value={newSrc.store} onChange={e=>setNewSrc(s=>({...s,store:e.target.value}))}
+                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }} />
+                </div>
+                <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:8,marginBottom:8 }}>
+                  <input placeholder="https://..." value={newSrc.url} onChange={e=>setNewSrc(s=>({...s,url:e.target.value}))}
+                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }} />
+                  <select value={newSrc.category_name} onChange={e=>setNewSrc(s=>({...s,category_name:e.target.value}))}
+                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }}>
+                    {categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+                <button className="btn btn-primary" style={{ fontSize:13,padding:"8px 18px" }} onClick={addSource} disabled={addingSource}>
+                  {addingSource ? "שומר..." : "+ הוסף מקור"}
+                </button>
+              </div>
+
+              {/* Sources list */}
+              {sources.length === 0 && srcLoaded && (
+                <div style={{ textAlign:"center",color:"var(--text-2)",padding:32,fontSize:14 }}>אין מקורות — הוסף את הראשון למעלה</div>
+              )}
+              {sources.map(src => (
+                <div key={src.id} style={{ display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
+                  <div style={{ flex:1,minWidth:0 }}>
+                    <div style={{ fontWeight:700,fontSize:13 }}>{src.name} <span style={{ fontWeight:400,color:"var(--text-2)",fontSize:12 }}>· {src.store} · {src.category_name}</span></div>
+                    <div style={{ fontSize:11,color:"var(--mid)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{src.url}</div>
+                  </div>
+                  <div style={{ display:"flex",gap:6,flexShrink:0,alignItems:"center" }}>
+                    <button onClick={() => toggleSource(src.id, src.is_active)}
+                      style={{ padding:"4px 12px",fontSize:11,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                        background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
+                      {src.is_active ? "פעיל" : "מושהה"}
+                    </button>
+                    <button className="btn btn-danger" style={{ padding:"4px 8px",fontSize:11 }} onClick={() => deleteSource(src.id)}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

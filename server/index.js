@@ -8,6 +8,7 @@ const cors     = require('cors');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const mysql    = require('mysql2/promise');
+const { startScheduler, runHunter } = require('./agent/dealHunter');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +36,25 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
 });
+
+// ── Auto-migrate hunter_sources ──────────────────────────────
+(async () => {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS hunter_sources (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        name          VARCHAR(100) NOT NULL,
+        url           TEXT         NOT NULL,
+        store         VARCHAR(100) NOT NULL,
+        category_name VARCHAR(100) NOT NULL DEFAULT 'אלקטרוניקה',
+        is_active     TINYINT(1)   NOT NULL DEFAULT 1,
+        created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (e) {
+    console.error('Migration error:', e.message);
+  }
+})();
 
 // ── Auth Middleware ──────────────────────────────────────────
 const auth = async (req, res, next) => {
@@ -141,8 +161,13 @@ app.get('/api/auth/me', auth, async (req, res) => {
 // ════════════════════════════════════════════════════════════
 
 app.get('/api/categories', async (req, res) => {
-  const [rows] = await db.execute('SELECT * FROM categories ORDER BY name');
-  res.json(rows);
+  try {
+    const [rows] = await db.execute('SELECT * FROM categories ORDER BY name');
+    res.json(rows);
+  } catch (e) {
+    console.error('DB error:', e.message);
+    res.status(500).json({ error: 'שגיאת שרת', detail: e.message });
+  }
 });
 
 // ════════════════════════════════════════════════════════════
@@ -356,5 +381,57 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
   res.json({ total_deals, pending, total_users, total_comments, featured });
 });
 
+// ════════════════════════════════════════════════════════════
+//  DEAL HUNTER
+// ════════════════════════════════════════════════════════════
+
+// POST /api/admin/hunt  — trigger manually from admin panel
+app.post('/api/admin/hunt', adminAuth, async (req, res) => {
+  try {
+    const result = await runHunter(db);
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  HUNTER SOURCES (admin)
+// ════════════════════════════════════════════════════════════
+
+// GET /api/admin/sources
+app.get('/api/admin/sources', adminAuth, async (req, res) => {
+  const [rows] = await db.execute('SELECT * FROM hunter_sources ORDER BY created_at DESC');
+  res.json(rows);
+});
+
+// POST /api/admin/sources
+app.post('/api/admin/sources', adminAuth, async (req, res) => {
+  const { name, url, store, category_name } = req.body;
+  if (!name || !url || !store) return res.status(400).json({ error: 'name, url, store חובה' });
+  const [result] = await db.execute(
+    'INSERT INTO hunter_sources (name, url, store, category_name) VALUES (?, ?, ?, ?)',
+    [name, url, store, category_name || 'אלקטרוניקה']
+  );
+  res.json({ id: result.insertId, name, url, store, category_name: category_name || 'אלקטרוניקה', is_active: 1 });
+});
+
+// PATCH /api/admin/sources/:id
+app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
+  const { is_active } = req.body;
+  await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
+  res.json({ success: true });
+});
+
+// DELETE /api/admin/sources/:id
+app.delete('/api/admin/sources/:id', adminAuth, async (req, res) => {
+  await db.execute('DELETE FROM hunter_sources WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
 // ── Start ────────────────────────────────────────────────────
-app.listen(PORT, () => console.log(`🔥 HOTדילים server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🔥 hotILdeals server running on port ${PORT}`);
+  startScheduler(db);
+});
