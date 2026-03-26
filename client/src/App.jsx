@@ -1,5 +1,5 @@
 // ============================================================
-//  App.jsx  –  HOTדילים  (connected to MySQL backend)
+//  App.jsx  –  hotILdeals  (connected to MySQL backend)
 //  Place in:  client/src/App.jsx
 // ============================================================
 import { useState, useEffect, useCallback } from "react";
@@ -208,7 +208,7 @@ export default function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ fontSize: 30 }}>🇮🇱</div>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>HOT<span style={{ color: "#7ec8ff" }}>דילים</span></div>
+                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>hot<span style={{ color: "#7ec8ff" }}>IL</span>deals</div>
                 <div style={{ fontSize: 11, color: "#a8c4f0" }}>קהילת הדילים הישראלית</div>
               </div>
             </div>
