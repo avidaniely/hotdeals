@@ -37,9 +37,10 @@ const db = mysql.createPool({
   connectionLimit: 10,
 });
 
-// ── Auto-migrate hunter_sources ──────────────────────────────
+// ── Auto-migrate & seed ──────────────────────────────────────
 (async () => {
   try {
+    // hunter_sources table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS hunter_sources (
         id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -51,6 +52,44 @@ const db = mysql.createPool({
         created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Seed default sources if empty
+    const [[{ cnt }]] = await db.execute('SELECT COUNT(*) AS cnt FROM hunter_sources');
+    if (cnt === 0) {
+      await db.execute(`
+        INSERT INTO hunter_sources (name, url, store, category_name) VALUES
+          ('KSP',      'https://ksp.co.il/web/cat/offers',                    'KSP',   'אלקטרוניקה'),
+          ('Bug',      'https://www.bug.co.il/cat/mivtzaim',                  'Bug',   'אלקטרוניקה'),
+          ('Zap Deals','https://www.zap.co.il/models.aspx?sog=v-cheapest',    'Zap',   'אלקטרוניקה'),
+          ('Ivory',    'https://www.ivory.co.il/catalog.php?act=cat&id=14',   'Ivory', 'אלקטרוניקה')
+      `);
+      console.log('✅ Seeded default hunter sources');
+    }
+
+    // hunter_config table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS hunter_config (
+        config_key   VARCHAR(100) NOT NULL PRIMARY KEY,
+        config_value TEXT,
+        updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default config if empty
+    const [[{ cfgCnt }]] = await db.execute('SELECT COUNT(*) AS cfgCnt FROM hunter_config');
+    if (cfgCnt === 0) {
+      await db.execute(`
+        INSERT INTO hunter_config (config_key, config_value) VALUES
+          ('ai_provider',  'anthropic'),
+          ('ai_api_key',   ''),
+          ('ai_model',     'claude-haiku-4-5-20251001'),
+          ('ai_max_tokens','1800'),
+          ('schedule',     '0 */6 * * *'),
+          ('enabled',      '1'),
+          ('system_prompt', 'You are a deal-extraction AI for an Israeli deals site called hotILdeals.\\nAnalyze the text below from {store}\\''s website and find the best 3–5 deals.\\n\\nFor each deal, return a JSON object with these fields:\\n- title         (string — product name, prefer Hebrew)\\n- deal_price    (number — current sale price in ₪, required)\\n- original_price (number — original price in ₪, or null)\\n- description   (string — 1–2 sentences in Hebrew describing the deal)\\n- url           (string — product page URL, or null if not found)\\n\\nRules:\\n- Only include items with a clear numeric price in ₪ (NIS).\\n- Prefer items with both original and sale price (showing a discount).\\n- If you cannot find any real deals, return an empty array [].\\n- Return ONLY a valid JSON array — no explanation, no markdown.')
+      `);
+      console.log('✅ Seeded default hunter config');
+    }
   } catch (e) {
     console.error('Migration error:', e.message);
   }
@@ -427,6 +466,35 @@ app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
 // DELETE /api/admin/sources/:id
 app.delete('/api/admin/sources/:id', adminAuth, async (req, res) => {
   await db.execute('DELETE FROM hunter_sources WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ════════════════════════════════════════════════════════════
+//  HUNTER CONFIG (admin)
+// ════════════════════════════════════════════════════════════
+
+// GET /api/admin/hunter-config  — returns config as { key: value } object
+app.get('/api/admin/hunter-config', adminAuth, async (req, res) => {
+  const [rows] = await db.execute('SELECT config_key, config_value FROM hunter_config');
+  const config = Object.fromEntries(rows.map(r => [r.config_key, r.config_value]));
+  // Mask the API key
+  if (config.ai_api_key) config.ai_api_key = config.ai_api_key ? '••••••••' : '';
+  res.json(config);
+});
+
+// PATCH /api/admin/hunter-config  — upsert one or more keys
+app.patch('/api/admin/hunter-config', adminAuth, async (req, res) => {
+  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','system_prompt'];
+  const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
+  if (!entries.length) return res.status(400).json({ error: 'no valid keys' });
+  for (const [key, value] of entries) {
+    // Don't overwrite api key with mask
+    if (key === 'ai_api_key' && value === '••••••••') continue;
+    await db.execute(
+      'INSERT INTO hunter_config (config_key, config_value) VALUES (?,?) ON DUPLICATE KEY UPDATE config_value=?',
+      [key, value, value]
+    );
+  }
   res.json({ success: true });
 });
 

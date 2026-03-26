@@ -903,192 +903,361 @@ function DealPage({ deal, currentUser, onVote, onComment, onBack, isAdmin, onAdm
 
 // ─── Admin Panel ──────────────────────────────────────────────────────────────
 function AdminPanel({ tab, onTab, deals, users, stats, categories, onClose, onUpdate, onDelete, onBanUser }) {
-  const [hunting,     setHunting]     = useState(false);
-  const [huntResult,  setHuntResult]  = useState(null);
-  const [sources,     setSources]     = useState([]);
-  const [srcLoaded,   setSrcLoaded]   = useState(false);
-  const [newSrc,      setNewSrc]      = useState({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
-  const [addingSource,setAddingSource]= useState(false);
+  // Hunter state
+  const [hunting,      setHunting]      = useState(false);
+  const [huntResult,   setHuntResult]   = useState(null);
+  const [sources,      setSources]      = useState([]);
+  const [srcLoaded,    setSrcLoaded]    = useState(false);
+  const [newSrc,       setNewSrc]       = useState({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
+  const [addingSrc,    setAddingSrc]    = useState(false);
+  // AI config state
+  const [aiConfig,     setAiConfig]     = useState(null);
+  const [aiSaving,     setAiSaving]     = useState(false);
+  const [aiSaved,      setAiSaved]      = useState(false);
 
-  // Load sources when sources tab is opened
   useEffect(() => {
-    if (tab === 'sources' && !srcLoaded) {
+    if ((tab === 'sources' || tab === 'ai') && !srcLoaded) {
       hunterAPI.getSources().then(r => { setSources(r); setSrcLoaded(true); }).catch(() => {});
     }
-  }, [tab, srcLoaded]);
+    if (tab === 'ai' && !aiConfig) {
+      hunterAPI.getConfig().then(cfg => setAiConfig(cfg)).catch(() => {});
+    }
+  }, [tab, srcLoaded, aiConfig]);
 
   const runHunter = async () => {
-    setHunting(true);
-    setHuntResult(null);
-    try {
-      const data = await hunterAPI.run();
-      setHuntResult(data);
-    } catch (e) {
-      setHuntResult({ error: e.message });
-    } finally {
-      setHunting(false);
-    }
+    setHunting(true); setHuntResult(null);
+    try { setHuntResult(await hunterAPI.run()); }
+    catch (e) { setHuntResult({ error: e.message }); }
+    finally { setHunting(false); }
   };
 
   const toggleSource = async (id, cur) => {
     await hunterAPI.toggleSource(id, cur ? 0 : 1);
     setSources(s => s.map(x => x.id === id ? { ...x, is_active: cur ? 0 : 1 } : x));
   };
-
   const deleteSource = async (id) => {
     await hunterAPI.deleteSource(id);
     setSources(s => s.filter(x => x.id !== id));
   };
-
   const addSource = async () => {
     if (!newSrc.name || !newSrc.url || !newSrc.store) return;
-    setAddingSource(true);
+    setAddingSrc(true);
     try {
       const created = await hunterAPI.addSource(newSrc);
       setSources(s => [created, ...s]);
       setNewSrc({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
-    } finally {
-      setAddingSource(false);
-    }
+    } finally { setAddingSrc(false); }
   };
+  const saveAiConfig = async () => {
+    setAiSaving(true);
+    try { await hunterAPI.saveConfig(aiConfig); setAiSaved(true); setTimeout(() => setAiSaved(false), 2500); }
+    finally { setAiSaving(false); }
+  };
+
+  const TABS = [
+    { id:'overview', icon:'📊', label:'סקירה' },
+    { id:'deals',    icon:'📋', label:'דילים',    badge: null },
+    { id:'pending',  icon:'⏳', label:'ממתינים',  badge: stats?.pending > 0 ? stats.pending : null },
+    { id:'users',    icon:'👥', label:'משתמשים' },
+    { id:'sources',  icon:'🌐', label:'מקורות' },
+    { id:'ai',       icon:'🤖', label:'AI הגדרות' },
+  ];
+
+  const inputStyle = { padding:"9px 12px",borderRadius:8,border:"1.5px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)",width:"100%",boxSizing:"border-box" };
+  const fieldLabel = { display:"block",fontSize:12,fontWeight:700,color:"var(--text-2)",marginBottom:5 };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-box" style={{ maxWidth:800,maxHeight:"90vh" }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
-          <h2 style={{ fontWeight:900,fontSize:22,color:"var(--text)" }}>⚙️ פאנל ניהול</h2>
-          <button onClick={onClose} style={{ background:"none",border:"none",fontSize:24,cursor:"pointer",color:"var(--text-2)" }}>×</button>
+      <div style={{ background:"var(--surface)",borderRadius:"var(--r-lg)",width:"100%",maxWidth:980,maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"var(--sh-lg)",animation:"slideUp .28s cubic-bezier(.34,1.56,.64,1)",overflow:"hidden" }}>
+
+        {/* ── Header bar ── */}
+        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8)",padding:"18px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+            <span style={{ fontSize:26 }}>⚙️</span>
+            <div>
+              <div style={{ fontWeight:900,fontSize:18,color:"#fff" }}>פאנל ניהול</div>
+              <div style={{ fontSize:11,color:"rgba(255,255,255,.55)" }}>hotILdeals admin</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:10,width:36,height:36,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
         </div>
 
-        {stats && (
-          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16 }}>
-            {[["📋 דילים",stats.total_deals,"var(--surface-2)","var(--blue)"],["⏳ ממתינים",stats.pending,"#FFF0F0","var(--danger)"],["👥 משתמשים",stats.total_users,"var(--surface-2)","var(--blue)"],["⭐ מוצגים",stats.featured,"#FFFBF0","var(--warn)"]].map(([l,v,bg,c])=>(
-              <div key={l} style={{ background:bg,borderRadius:12,padding:14,textAlign:"center",border:"1px solid var(--border)" }}>
-                <div style={{ fontSize:22,fontWeight:900,color:c }}>{v}</div>
-                <div style={{ fontSize:11,color:"var(--text-2)",marginTop:3 }}>{l}</div>
-              </div>
+        {/* ── Body: sidebar + content ── */}
+        <div style={{ display:"flex",flex:1,overflow:"hidden" }}>
+
+          {/* Sidebar */}
+          <div style={{ width:170,background:"var(--surface-2)",borderLeft:"1px solid var(--border)",display:"flex",flexDirection:"column",padding:"12px 8px",gap:2,flexShrink:0,overflowY:"auto" }}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => onTab(t.id)}
+                style={{ display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,transition:"var(--tr)",textAlign:"right",width:"100%",position:"relative",
+                  background:tab===t.id?"var(--blue)":"transparent",
+                  color:tab===t.id?"#fff":"var(--text-2)" }}>
+                <span style={{ fontSize:16,flexShrink:0 }}>{t.icon}</span>
+                <span style={{ flex:1 }}>{t.label}</span>
+                {t.badge && <span style={{ background:"var(--danger)",color:"#fff",borderRadius:10,padding:"1px 6px",fontSize:10,fontWeight:900 }}>{t.badge}</span>}
+              </button>
             ))}
           </div>
-        )}
 
-        {/* Deal Hunter */}
-        <div style={{ background:"linear-gradient(135deg,#002A8A,#0038A8)",borderRadius:14,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap" }}>
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:800,fontSize:15,color:"#fff",marginBottom:3 }}>🤖 Deal Hunter</div>
-            <div style={{ fontSize:12,color:"rgba(255,255,255,.65)" }}>סורק חנויות ישראליות עם AI ומוצא דילים חדשים · רץ אוטומטית כל 6 שעות</div>
-          </div>
-          <button className="btn" onClick={runHunter} disabled={hunting}
-            style={{ background:"rgba(255,255,255,.15)",color:"#fff",border:"1.5px solid rgba(255,255,255,.3)",padding:"9px 20px",fontSize:13,flexShrink:0,opacity:hunting?.6:1 }}>
-            {hunting ? "🔍 סורק..." : "▶ הרץ עכשיו"}
-          </button>
-          {huntResult && !huntResult.error && (
-            <div style={{ width:"100%",background:"rgba(255,255,255,.1)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#fff",display:"flex",gap:16,flexWrap:"wrap" }}>
-              <span>✅ נמצאו: <strong>{huntResult.found}</strong></span>
-              <span>⏭ כפולים: <strong>{huntResult.skipped}</strong></span>
-              <span>⏱ זמן: <strong>{huntResult.duration}s</strong></span>
-              {huntResult.errors?.length > 0 && <span style={{ color:"#ffaaaa" }}>⚠️ {huntResult.errors.length} שגיאות</span>}
-            </div>
-          )}
-          {huntResult?.error && (
-            <div style={{ width:"100%",background:"rgba(255,0,0,.2)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#ffcccc" }}>❌ {huntResult.error}</div>
-          )}
-        </div>
+          {/* Content */}
+          <div style={{ flex:1,overflowY:"auto",padding:24 }}>
 
-        <div style={{ display:"flex",gap:4,background:"var(--surface-2)",borderRadius:10,padding:4,marginBottom:20 }}>
-          {[["deals","📋 דילים"],["pending","⏳ ממתינים"],["users","👥 משתמשים"],["sources","🤖 מקורות"]].map(([id,label])=>(
-            <button key={id} onClick={() => onTab(id)} style={{ flex:1,border:"none",borderRadius:8,padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",transition:"var(--tr)",
-              background:tab===id?"var(--surface)":"transparent",color:tab===id?"var(--blue)":"var(--text-2)",boxShadow:tab===id?"var(--sh-sm)":"none" }}>
-              {label}{id==="pending"&&stats?.pending>0?` (${stats.pending})`:""}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ maxHeight:440,overflowY:"auto" }}>
-          {(tab==="deals"?deals:tab==="pending"?deals.filter(d=>!d.is_approved):null)?.map(deal => (
-            <div key={deal.id} style={{ display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
-              <img src={deal.image_url||"https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=100&q=60"} alt="" style={{ width:56,height:44,objectFit:"cover",borderRadius:8,flexShrink:0 }} />
-              <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{deal.title}</div>
-                <div style={{ fontSize:11,color:"var(--mid)",marginTop:2 }}>
-                  {deal.store} · {deal.category} · {deal.avatar}{deal.username}
-                  {!deal.is_approved && <span style={{ color:"var(--blue)",marginRight:6 }}>· ממתין</span>}
-                  {deal.is_featured && <span style={{ color:"#f59c00",marginRight:6 }}>· מוצג</span>}
+            {/* ── OVERVIEW ── */}
+            {tab==="overview" && (
+              <div>
+                <div style={{ fontWeight:900,fontSize:18,color:"var(--text)",marginBottom:20 }}>סקירה כללית</div>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24 }}>
+                  {[["📋","דילים סה״כ",stats?.total_deals,"var(--blue)","#EEF2FC"],
+                    ["⏳","ממתינים לאישור",stats?.pending,"var(--danger)","#FFF0F0"],
+                    ["👥","משתמשים",stats?.total_users,"var(--blue)","#EEF2FC"],
+                    ["💬","תגובות",stats?.total_comments,"var(--success)","#F0FFF7"],
+                    ["⭐","מוצגים",stats?.featured,"var(--warn)","#FFFBF0"],
+                  ].map(([icon,label,val,color,bg])=>(
+                    <div key={label} style={{ background:bg,borderRadius:14,padding:"18px 16px",border:`1px solid ${color}22`,textAlign:"center" }}>
+                      <div style={{ fontSize:28,marginBottom:6 }}>{icon}</div>
+                      <div style={{ fontSize:28,fontWeight:900,color,lineHeight:1 }}>{val ?? '—'}</div>
+                      <div style={{ fontSize:12,color:"var(--text-2)",marginTop:4 }}>{label}</div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <div style={{ display:"flex",gap:5,flexShrink:0 }}>
-                {!deal.is_approved && <button className="btn btn-success" style={{ padding:"4px 8px",fontSize:11 }} onClick={() => onUpdate(deal.id,{is_approved:1})}>✅</button>}
-                <button className="btn btn-ghost" style={{ padding:"4px 8px",fontSize:11 }} onClick={() => onUpdate(deal.id,{is_featured:deal.is_featured?0:1})}>{deal.is_featured?"⭐":"☆"}</button>
-                <button className="btn btn-ghost" style={{ padding:"4px 8px",fontSize:11 }} onClick={() => onUpdate(deal.id,{is_expired:deal.is_expired?0:1})}>{deal.is_expired?"🔄":"⏰"}</button>
-                <button className="btn btn-danger" style={{ padding:"4px 8px",fontSize:11 }} onClick={() => onDelete(deal.id)}>🗑️</button>
-              </div>
-            </div>
-          ))}
 
-          {tab==="users" && users.map(u => (
-            <div key={u.id} style={{ display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
-              <span style={{ fontSize:32 }}>{u.avatar}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700,fontSize:14 }}>
-                  {u.username} {u.role==="admin" && <span style={{ background:"#ffcc00",color:"#333",borderRadius:4,padding:"1px 6px",fontSize:11 }}>מנהל</span>}
-                  {u.is_banned && <span style={{ background:"#fee",color:"var(--red)",borderRadius:4,padding:"1px 6px",fontSize:11,marginRight:4 }}>חסום</span>}
-                </div>
-                <div style={{ fontSize:12,color:"var(--mid)" }}>{u.email} · נרשם: {u.created_at?.split("T")[0]}</div>
-              </div>
-              {u.role !== "admin" && (
-                <button className={`btn ${u.is_banned?"btn-success":"btn-danger"}`} style={{ padding:"4px 12px",fontSize:11 }} onClick={() => onBanUser(u.id)}>
-                  {u.is_banned?"🔓 שחרר":"🚫 חסום"}
-                </button>
-              )}
-            </div>
-          ))}
-
-          {tab==="sources" && (
-            <div>
-              {/* Add new source form */}
-              <div style={{ background:"var(--surface-2)",borderRadius:12,padding:16,marginBottom:16,border:"1px solid var(--border)" }}>
-                <div style={{ fontWeight:700,fontSize:14,marginBottom:12,color:"var(--text)" }}>הוסף מקור חדש</div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8 }}>
-                  <input placeholder="שם (KSP, Bug...)" value={newSrc.name} onChange={e=>setNewSrc(s=>({...s,name:e.target.value}))}
-                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }} />
-                  <input placeholder="חנות (KSP)" value={newSrc.store} onChange={e=>setNewSrc(s=>({...s,store:e.target.value}))}
-                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }} />
-                </div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:8,marginBottom:8 }}>
-                  <input placeholder="https://..." value={newSrc.url} onChange={e=>setNewSrc(s=>({...s,url:e.target.value}))}
-                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }} />
-                  <select value={newSrc.category_name} onChange={e=>setNewSrc(s=>({...s,category_name:e.target.value}))}
-                    style={{ padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",fontSize:13,background:"var(--surface)",color:"var(--text)" }}>
-                    {categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
-                  </select>
-                </div>
-                <button className="btn btn-primary" style={{ fontSize:13,padding:"8px 18px" }} onClick={addSource} disabled={addingSource}>
-                  {addingSource ? "שומר..." : "+ הוסף מקור"}
-                </button>
-              </div>
-
-              {/* Sources list */}
-              {sources.length === 0 && srcLoaded && (
-                <div style={{ textAlign:"center",color:"var(--text-2)",padding:32,fontSize:14 }}>אין מקורות — הוסף את הראשון למעלה</div>
-              )}
-              {sources.map(src => (
-                <div key={src.id} style={{ display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ fontWeight:700,fontSize:13 }}>{src.name} <span style={{ fontWeight:400,color:"var(--text-2)",fontSize:12 }}>· {src.store} · {src.category_name}</span></div>
-                    <div style={{ fontSize:11,color:"var(--mid)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{src.url}</div>
-                  </div>
-                  <div style={{ display:"flex",gap:6,flexShrink:0,alignItems:"center" }}>
-                    <button onClick={() => toggleSource(src.id, src.is_active)}
-                      style={{ padding:"4px 12px",fontSize:11,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
-                        background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
-                      {src.is_active ? "פעיל" : "מושהה"}
+                {/* Quick Run Deal Hunter */}
+                <div style={{ background:"linear-gradient(135deg,#002A8A,#0047CC)",borderRadius:16,padding:24 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:16,flexWrap:"wrap" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:800,fontSize:16,color:"#fff",marginBottom:4 }}>🤖 Deal Hunter</div>
+                      <div style={{ fontSize:13,color:"rgba(255,255,255,.65)" }}>סורק חנויות ישראליות עם AI · רץ אוטומטית לפי הגדרות</div>
+                    </div>
+                    <button className="btn" onClick={runHunter} disabled={hunting}
+                      style={{ background:"rgba(255,255,255,.18)",color:"#fff",border:"1.5px solid rgba(255,255,255,.35)",padding:"10px 24px",fontSize:14,flexShrink:0 }}>
+                      {hunting ? "🔍 סורק..." : "▶ הרץ עכשיו"}
                     </button>
-                    <button className="btn btn-danger" style={{ padding:"4px 8px",fontSize:11 }} onClick={() => deleteSource(src.id)}>🗑️</button>
                   </div>
+                  {huntResult && !huntResult.error && (
+                    <div style={{ marginTop:14,background:"rgba(255,255,255,.1)",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#fff",display:"flex",gap:20,flexWrap:"wrap" }}>
+                      <span>✅ נמצאו: <strong>{huntResult.found}</strong></span>
+                      <span>⏭ כפולים: <strong>{huntResult.skipped}</strong></span>
+                      <span>⏱ זמן: <strong>{huntResult.duration}s</strong></span>
+                      {huntResult.errors?.length > 0 && <span style={{ color:"#ffaaaa" }}>⚠️ {huntResult.errors.length} שגיאות</span>}
+                    </div>
+                  )}
+                  {huntResult?.error && (
+                    <div style={{ marginTop:14,background:"rgba(255,0,0,.25)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#ffcccc" }}>❌ {huntResult.error}</div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+
+            {/* ── DEALS / PENDING ── */}
+            {(tab==="deals"||tab==="pending") && (
+              <div>
+                <div style={{ fontWeight:900,fontSize:18,color:"var(--text)",marginBottom:20 }}>
+                  {tab==="deals" ? `📋 כל הדילים (${deals.length})` : `⏳ ממתינים לאישור (${deals.filter(d=>!d.is_approved).length})`}
+                </div>
+                {(tab==="deals" ? deals : deals.filter(d=>!d.is_approved)).map(deal => (
+                  <div key={deal.id} style={{ display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
+                    <img src={deal.image_url||"https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=100&q=60"} alt=""
+                      style={{ width:60,height:48,objectFit:"cover",borderRadius:10,flexShrink:0 }} />
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--text)" }}>{deal.title}</div>
+                      <div style={{ fontSize:11,color:"var(--text-2)",marginTop:3,display:"flex",gap:8,flexWrap:"wrap" }}>
+                        <span>₪{(+deal.deal_price).toLocaleString()}</span>
+                        <span>·</span><span>{deal.store}</span>
+                        <span>·</span><span>{deal.category}</span>
+                        <span>·</span><span>{deal.avatar}{deal.username}</span>
+                        {!deal.is_approved && <span style={{ color:"var(--blue)",fontWeight:700 }}>ממתין</span>}
+                        {deal.is_featured && <span style={{ color:"var(--warn)",fontWeight:700 }}>מוצג</span>}
+                        {deal.is_expired && <span style={{ color:"var(--danger)",fontWeight:700 }}>פג תוקף</span>}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex",gap:5,flexShrink:0 }}>
+                      {!deal.is_approved && <button className="btn btn-success" style={{ padding:"5px 10px",fontSize:11 }} onClick={() => onUpdate(deal.id,{is_approved:1})}>✅ אשר</button>}
+                      <button className="btn btn-ghost" style={{ padding:"5px 8px",fontSize:11 }} onClick={() => onUpdate(deal.id,{is_featured:deal.is_featured?0:1})} title={deal.is_featured?"הסר הצגה":"סמן כמוצג"}>{deal.is_featured?"⭐":"☆"}</button>
+                      <button className="btn btn-ghost" style={{ padding:"5px 8px",fontSize:11 }} onClick={() => onUpdate(deal.id,{is_expired:deal.is_expired?0:1})} title={deal.is_expired?"שחזר":"סמן כפג תוקף"}>{deal.is_expired?"🔄":"⏰"}</button>
+                      <button className="btn btn-danger" style={{ padding:"5px 8px",fontSize:11 }} onClick={() => onDelete(deal.id)}>🗑️</button>
+                    </div>
+                  </div>
+                ))}
+                {(tab==="pending" && deals.filter(d=>!d.is_approved).length===0) && (
+                  <div style={{ textAlign:"center",padding:"48px 24px",color:"var(--text-2)" }}>
+                    <div style={{ fontSize:48,marginBottom:12 }}>✅</div>
+                    <div style={{ fontWeight:700,fontSize:16 }}>אין דילים ממתינים</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── USERS ── */}
+            {tab==="users" && (
+              <div>
+                <div style={{ fontWeight:900,fontSize:18,color:"var(--text)",marginBottom:20 }}>👥 משתמשים ({users.length})</div>
+                {users.map(u => (
+                  <div key={u.id} style={{ display:"flex",gap:14,alignItems:"center",padding:"12px 0",borderBottom:"1px solid var(--border)" }}>
+                    <span style={{ fontSize:34,flexShrink:0 }}>{u.avatar}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:700,fontSize:14,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" }}>
+                        {u.username}
+                        {u.role==="admin" && <span style={{ background:"linear-gradient(135deg,#FFD700,#FFA500)",color:"#333",borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800 }}>מנהל</span>}
+                        {u.is_banned && <span style={{ background:"#fee",color:"var(--danger)",borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:800 }}>חסום</span>}
+                      </div>
+                      <div style={{ fontSize:12,color:"var(--text-2)",marginTop:2 }}>{u.email} · נרשם: {u.created_at?.split("T")[0]}</div>
+                    </div>
+                    {u.role !== "admin" && (
+                      <button className={`btn ${u.is_banned?"btn-success":"btn-danger"}`} style={{ padding:"6px 14px",fontSize:12 }} onClick={() => onBanUser(u.id)}>
+                        {u.is_banned ? "🔓 שחרר" : "🚫 חסום"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── SOURCES ── */}
+            {tab==="sources" && (
+              <div>
+                <div style={{ fontWeight:900,fontSize:18,color:"var(--text)",marginBottom:6 }}>🌐 מקורות סריקה</div>
+                <div style={{ fontSize:13,color:"var(--text-2)",marginBottom:20 }}>הגדר אילו אתרים ה-AI יסרוק לדילים חדשים</div>
+
+                {/* Add form */}
+                <div style={{ background:"var(--surface-2)",borderRadius:14,padding:18,marginBottom:20,border:"1px solid var(--border)" }}>
+                  <div style={{ fontWeight:700,fontSize:14,marginBottom:14,color:"var(--text)" }}>+ הוסף מקור חדש</div>
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10 }}>
+                    <div><label style={fieldLabel}>שם מקור</label><input placeholder="KSP, Bug, Amazon..." value={newSrc.name} onChange={e=>setNewSrc(s=>({...s,name:e.target.value}))} style={inputStyle} /></div>
+                    <div><label style={fieldLabel}>שם חנות (לתצוגה)</label><input placeholder="KSP" value={newSrc.store} onChange={e=>setNewSrc(s=>({...s,store:e.target.value}))} style={inputStyle} /></div>
+                  </div>
+                  <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:14 }}>
+                    <div><label style={fieldLabel}>כתובת URL לסריקה</label><input placeholder="https://ksp.co.il/web/cat/offers" value={newSrc.url} onChange={e=>setNewSrc(s=>({...s,url:e.target.value}))} style={inputStyle} /></div>
+                    <div><label style={fieldLabel}>קטגוריה</label>
+                      <select value={newSrc.category_name} onChange={e=>setNewSrc(s=>({...s,category_name:e.target.value}))} style={inputStyle}>
+                        {categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ padding:"9px 22px",fontSize:13 }} onClick={addSource} disabled={addingSrc}>
+                    {addingSrc ? "שומר..." : "+ הוסף מקור"}
+                  </button>
+                </div>
+
+                {/* List */}
+                {!srcLoaded && <div style={{ textAlign:"center",padding:32,color:"var(--text-2)" }}>טוען...</div>}
+                {srcLoaded && sources.length === 0 && (
+                  <div style={{ textAlign:"center",padding:40,color:"var(--text-2)" }}>
+                    <div style={{ fontSize:40,marginBottom:10 }}>🌐</div>
+                    <div style={{ fontWeight:700 }}>אין מקורות — הוסף את הראשון למעלה</div>
+                  </div>
+                )}
+                {sources.map(src => (
+                  <div key={src.id} style={{ display:"flex",gap:14,alignItems:"center",padding:"14px 0",borderBottom:"1px solid var(--border)" }}>
+                    <div style={{ width:40,height:40,borderRadius:10,background:"var(--surface-3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>🌐</div>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ fontWeight:700,fontSize:14,color:"var(--text)" }}>{src.name}
+                        <span style={{ fontWeight:400,color:"var(--text-2)",fontSize:12,marginRight:8 }}>{src.store} · {src.category_name}</span>
+                      </div>
+                      <div style={{ fontSize:11,color:"var(--text-3)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{src.url}</div>
+                    </div>
+                    <div style={{ display:"flex",gap:8,flexShrink:0,alignItems:"center" }}>
+                      <button onClick={() => toggleSource(src.id, src.is_active)}
+                        style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                          background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
+                        {src.is_active ? "● פעיל" : "○ מושהה"}
+                      </button>
+                      <button className="btn btn-danger" style={{ padding:"5px 9px",fontSize:12 }} onClick={() => deleteSource(src.id)}>🗑️</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── AI SETTINGS ── */}
+            {tab==="ai" && (
+              <div>
+                <div style={{ fontWeight:900,fontSize:18,color:"var(--text)",marginBottom:6 }}>🤖 הגדרות AI</div>
+                <div style={{ fontSize:13,color:"var(--text-2)",marginBottom:24 }}>הגדר את ספק ה-AI, המודל, הטוקן, הפרומפט ולוח הזמנים לסריקה אוטומטית</div>
+
+                {!aiConfig ? (
+                  <div style={{ textAlign:"center",padding:40,color:"var(--text-2)" }}>טוען הגדרות...</div>
+                ) : (
+                  <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
+
+                    {/* Provider + enabled */}
+                    <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,border:"1px solid var(--border)" }}>
+                      <div style={{ fontWeight:800,fontSize:14,color:"var(--text)",marginBottom:16 }}>🔌 ספק AI</div>
+                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
+                        <div>
+                          <label style={fieldLabel}>ספק</label>
+                          <select value={aiConfig.ai_provider||'anthropic'} onChange={e=>setAiConfig(c=>({...c,ai_provider:e.target.value}))} style={inputStyle}>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="openai">OpenAI (GPT)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={fieldLabel}>מודל</label>
+                          <input value={aiConfig.ai_model||''} onChange={e=>setAiConfig(c=>({...c,ai_model:e.target.value}))}
+                            placeholder="claude-haiku-4-5-20251001" style={inputStyle} />
+                        </div>
+                      </div>
+                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+                        <div>
+                          <label style={fieldLabel}>API Key / Token</label>
+                          <input type="password" value={aiConfig.ai_api_key||''} onChange={e=>setAiConfig(c=>({...c,ai_api_key:e.target.value}))}
+                            placeholder="sk-ant-... / הכנס טוקן חדש" style={inputStyle} />
+                          <div style={{ fontSize:11,color:"var(--text-3)",marginTop:4 }}>הטוקן מוצג כ-•••• — הכנס ערך חדש כדי לשנות</div>
+                        </div>
+                        <div>
+                          <label style={fieldLabel}>מקסימום טוקנים לתשובה</label>
+                          <input type="number" value={aiConfig.ai_max_tokens||1800} onChange={e=>setAiConfig(c=>({...c,ai_max_tokens:e.target.value}))}
+                            min={500} max={4000} style={inputStyle} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Schedule + enabled */}
+                    <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,border:"1px solid var(--border)" }}>
+                      <div style={{ fontWeight:800,fontSize:14,color:"var(--text)",marginBottom:16 }}>⏰ תזמון</div>
+                      <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:12,alignItems:"end" }}>
+                        <div>
+                          <label style={fieldLabel}>Cron Expression (שרת צריך restart לאחר שינוי)</label>
+                          <input value={aiConfig.schedule||'0 */6 * * *'} onChange={e=>setAiConfig(c=>({...c,schedule:e.target.value}))}
+                            placeholder="0 */6 * * *" style={inputStyle} />
+                          <div style={{ fontSize:11,color:"var(--text-3)",marginTop:4 }}>
+                            כל 6 שעות: <code>0 */6 * * *</code> · כל יום בחצות: <code>0 0 * * *</code> · כל שעה: <code>0 * * * *</code>
+                          </div>
+                        </div>
+                        <div style={{ paddingBottom:22 }}>
+                          <button onClick={()=>setAiConfig(c=>({...c,enabled:c.enabled==='1'?'0':'1'}))}
+                            style={{ padding:"9px 18px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,
+                              background:aiConfig.enabled==='1'?"#e8f5e9":"#fce4e4",
+                              color:aiConfig.enabled==='1'?"#2e7d32":"#c62828" }}>
+                            {aiConfig.enabled==='1' ? "● מופעל" : "○ מושהה"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* System prompt */}
+                    <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,border:"1px solid var(--border)" }}>
+                      <div style={{ fontWeight:800,fontSize:14,color:"var(--text)",marginBottom:6 }}>📝 System Prompt</div>
+                      <div style={{ fontSize:12,color:"var(--text-2)",marginBottom:12 }}>
+                        השתמש ב-<code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{store}'}</code> כדי להכניס את שם החנות בצורה דינמית
+                      </div>
+                      <textarea value={aiConfig.system_prompt||''} onChange={e=>setAiConfig(c=>({...c,system_prompt:e.target.value}))}
+                        rows={10} style={{ ...inputStyle,resize:"vertical",lineHeight:1.6,fontFamily:"monospace",fontSize:12 }} />
+                    </div>
+
+                    {/* Save */}
+                    <div style={{ display:"flex",alignItems:"center",gap:14 }}>
+                      <button className="btn btn-primary" style={{ padding:"12px 32px",fontSize:15 }} onClick={saveAiConfig} disabled={aiSaving}>
+                        {aiSaving ? "שומר..." : "💾 שמור הגדרות"}
+                      </button>
+                      {aiSaved && <span style={{ color:"var(--success)",fontWeight:700,fontSize:14 }}>✅ נשמר בהצלחה!</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>{/* /content */}
+        </div>{/* /body */}
       </div>
     </div>
   );
