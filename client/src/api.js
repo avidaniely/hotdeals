@@ -99,4 +99,9 @@ export const hunterAPI = {
   getConfig:    ()                    => api('/admin/hunter-config'),
   saveConfig:   (body)                => api('/admin/hunter-config', { method: 'PATCH', body }),
   getLogs:      ()                    => api('/admin/hunter-logs'),
+  getPrompts:   ()                    => api('/admin/prompts'),
+  addPrompt:    (body)                => api('/admin/prompts',     { method: 'POST',  body }),
+  updatePrompt: (id, body)            => api(`/admin/prompts/${id}`, { method: 'PATCH', body }),
+  deletePrompt: (id)                  => api(`/admin/prompts/${id}`, { method: 'DELETE' }),
+  assignPrompt: (sourceId, promptId)  => api(`/admin/sources/${sourceId}`, { method: 'PATCH', body: { prompt_id: promptId } }),
 };

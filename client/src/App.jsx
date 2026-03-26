@@ -941,6 +941,12 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
   // Logs state
   const [logs,         setLogs]         = useState([]);
   const [logsLoaded,   setLogsLoaded]   = useState(false);
+  // Prompts state
+  const [prompts,      setPrompts]      = useState([]);
+  const [promptsLoaded,setPromptsLoaded]= useState(false);
+  const [editingPrompt,setEditingPrompt]= useState(null); // null | 'new' | {id,...}
+  const [promptDraft,  setPromptDraft]  = useState({ name:'', description:'', prompt_text:'' });
+  const [promptSaving, setPromptSaving] = useState(false);
 
   useEffect(() => {
     if ((tab === 'sources' || tab === 'ai') && !srcLoaded) {
@@ -952,7 +958,10 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     if (tab === 'logs' && !logsLoaded) {
       hunterAPI.getLogs().then(r => { setLogs(r); setLogsLoaded(true); }).catch(() => {});
     }
-  }, [tab, srcLoaded, aiConfig, logsLoaded]);
+    if ((tab === 'prompts' || tab === 'sources') && !promptsLoaded) {
+      hunterAPI.getPrompts().then(r => { setPrompts(r); setPromptsLoaded(true); }).catch(() => {});
+    }
+  }, [tab, srcLoaded, aiConfig, logsLoaded, promptsLoaded]);
 
   const runHunterNow = async () => {
     setHunting(true); setHuntResult(null);
@@ -1024,6 +1033,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     { id:'users',    icon:'👥', label:'משתמשים' },
     { id:'sources',  icon:'🌐', label:'מקורות' },
     { id:'ai',       icon:'🤖', label:'AI הגדרות' },
+    { id:'prompts',  icon:'📝', label:'פרומפטים' },
     { id:'logs',     icon:'📋', label:'לוג' },
   ];
 
@@ -1221,7 +1231,18 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                     </div>
                     <div style={{ fontSize:11,color:"var(--text-3)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{src.url}</div>
                   </div>
-                  <div style={{ display:"flex",gap:8,flexShrink:0,alignItems:"center" }}>
+                  <div style={{ display:"flex",gap:8,flexShrink:0,alignItems:"center",flexWrap:"wrap" }}>
+                    <select
+                      value={src.prompt_id || ''}
+                      onChange={async e => {
+                        const pid = e.target.value ? +e.target.value : null;
+                        await hunterAPI.assignPrompt(src.id, pid);
+                        setSources(s => s.map(x => x.id === src.id ? { ...x, prompt_id: pid, prompt_name: prompts.find(p=>p.id===pid)?.name || null } : x));
+                      }}
+                      style={{ padding:"5px 10px",fontSize:12,borderRadius:8,border:"1.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer" }}>
+                      <option value="">🌐 גלובלי</option>
+                      {prompts.map(p => <option key={p.id} value={p.id}>📝 {p.name}</option>)}
+                    </select>
                     <button onClick={() => toggleSource(src.id, src.is_active)}
                       style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
                         background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
@@ -1366,6 +1387,115 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── PROMPTS ── */}
+          {tab==="prompts" && (
+            <div>
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20 }}>
+                <div>
+                  <div style={{ fontWeight:900,fontSize:18,color:"var(--text)" }}>📝 מאגר פרומפטים</div>
+                  <div style={{ fontSize:13,color:"var(--text-2)",marginTop:4 }}>הגדר תבניות פרומפט — הקצה לכל מקור את התבנית המתאימה</div>
+                </div>
+                {editingPrompt === null && (
+                  <button className="btn btn-primary" style={{ fontSize:13 }}
+                    onClick={() => { setPromptDraft({ name:'', description:'', prompt_text:'' }); setEditingPrompt('new'); }}>
+                    + פרומפט חדש
+                  </button>
+                )}
+              </div>
+
+              {/* Create / Edit form */}
+              {editingPrompt !== null && (
+                <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,marginBottom:24,border:"1.5px solid var(--blue)" }}>
+                  <div style={{ fontWeight:800,fontSize:15,color:"var(--text)",marginBottom:16 }}>
+                    {editingPrompt === 'new' ? '+ פרומפט חדש' : `✏️ עריכה: ${editingPrompt.name}`}
+                  </div>
+                  <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
+                    <div>
+                      <label style={fieldLabel}>שם הפרומפט</label>
+                      <input value={promptDraft.name} onChange={e=>setPromptDraft(d=>({...d,name:e.target.value}))}
+                        placeholder="מרצ'נט כללי, אגרגטור..." style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={fieldLabel}>תיאור קצר</label>
+                      <input value={promptDraft.description} onChange={e=>setPromptDraft(d=>({...d,description:e.target.value}))}
+                        placeholder="לאתרי חנויות, לאגרגטורים..." style={inputStyle} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom:6 }}>
+                    <label style={fieldLabel}>
+                      טקסט הפרומפט
+                      <span style={{ fontWeight:400,marginRight:8,color:"var(--text-3)" }}>
+                        משתנים: <code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{store}'}</code>
+                        {' '}<code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{min_votes}'}</code>
+                        {' '}<code style={{ background:"var(--surface-3)",padding:"1px 5px",borderRadius:4 }}>{'{min_comments}'}</code>
+                      </span>
+                    </label>
+                    <textarea value={promptDraft.prompt_text} onChange={e=>setPromptDraft(d=>({...d,prompt_text:e.target.value}))}
+                      rows={10} style={{ ...inputStyle,resize:"vertical",fontFamily:"monospace",fontSize:12,lineHeight:1.6 }} />
+                  </div>
+                  <div style={{ display:"flex",gap:10,marginTop:14 }}>
+                    <button className="btn btn-primary" disabled={promptSaving || !promptDraft.name || !promptDraft.prompt_text}
+                      onClick={async () => {
+                        setPromptSaving(true);
+                        try {
+                          if (editingPrompt === 'new') {
+                            const created = await hunterAPI.addPrompt(promptDraft);
+                            setPrompts(p => [...p, created]);
+                          } else {
+                            await hunterAPI.updatePrompt(editingPrompt.id, promptDraft);
+                            setPrompts(p => p.map(x => x.id === editingPrompt.id ? { ...x, ...promptDraft } : x));
+                          }
+                          setEditingPrompt(null);
+                        } finally { setPromptSaving(false); }
+                      }}>
+                      {promptSaving ? "שומר..." : "💾 שמור"}
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => setEditingPrompt(null)}>ביטול</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Prompts list */}
+              {!promptsLoaded && <div style={{ textAlign:"center",padding:40,color:"var(--text-2)" }}>טוען...</div>}
+              {promptsLoaded && prompts.length === 0 && (
+                <div style={{ textAlign:"center",padding:60,color:"var(--text-2)" }}>
+                  <div style={{ fontSize:48,marginBottom:12 }}>📝</div>
+                  <div style={{ fontWeight:700 }}>אין פרומפטים — צור את הראשון</div>
+                </div>
+              )}
+              {prompts.map(p => (
+                <div key={p.id} style={{ borderBottom:"1px solid var(--border)",padding:"16px 0" }}>
+                  <div style={{ display:"flex",alignItems:"flex-start",gap:12 }}>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:4 }}>
+                        <span style={{ fontWeight:800,fontSize:15,color:"var(--text)" }}>{p.name}</span>
+                        {p.description && <span style={{ fontSize:12,color:"var(--text-2)" }}>{p.description}</span>}
+                        <span style={{ fontSize:11,color:"var(--text-3)",marginRight:"auto" }}>
+                          מוקצה ל-{sources.filter(s=>s.prompt_id===p.id).length} מקורות
+                        </span>
+                      </div>
+                      <pre style={{ fontSize:11,color:"var(--text-2)",background:"var(--surface-3)",borderRadius:8,padding:"8px 12px",whiteSpace:"pre-wrap",wordBreak:"break-all",maxHeight:80,overflow:"hidden",fontFamily:"monospace",lineHeight:1.5 }}>
+                        {p.prompt_text}
+                      </pre>
+                    </div>
+                    <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                      <button className="btn btn-ghost" style={{ padding:"5px 12px",fontSize:12 }}
+                        onClick={() => { setPromptDraft({ name:p.name, description:p.description||'', prompt_text:p.prompt_text }); setEditingPrompt(p); }}>
+                        ✏️ ערוך
+                      </button>
+                      <button className="btn btn-danger" style={{ padding:"5px 9px",fontSize:12 }}
+                        onClick={async () => {
+                          await hunterAPI.deletePrompt(p.id);
+                          setPrompts(ps => ps.filter(x => x.id !== p.id));
+                          setSources(ss => ss.map(s => s.prompt_id === p.id ? { ...s, prompt_id: null, prompt_name: null } : s));
+                        }}>🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

@@ -66,6 +66,55 @@ const db = mysql.createPool({
       console.log('✅ Seeded default hunter sources');
     }
 
+    // Add prompt_id column to hunter_sources (existing installs)
+    await db.execute('ALTER TABLE hunter_sources ADD COLUMN prompt_id INT DEFAULT NULL')
+      .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
+
+    // hunter_prompts table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS hunter_prompts (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        name         VARCHAR(100) NOT NULL,
+        description  VARCHAR(255),
+        prompt_text  TEXT NOT NULL,
+        created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default prompt templates if empty
+    const [[{ pCnt }]] = await db.execute('SELECT COUNT(*) AS pCnt FROM hunter_prompts');
+    if (pCnt === 0) {
+      await db.execute(`
+        INSERT INTO hunter_prompts (name, description, prompt_text) VALUES
+        (
+          'מרצ\\u2019נט - כללי',
+          'לאתרי חנויות כמו KSP, Bug, Ivory, Amazon',
+          'אתה AI לחילוץ דילים עבור אתר hotILdeals.\\nנתח את הטקסט מאתר {store} ומצא את 3-5 העסקאות הטובות ביותר.\\n\\nעבור כל עסקה החזר:\\n- title: שם המוצר (עברית מועדפת)\\n- deal_price: מחיר מבצע (מספר, ₪)\\n- original_price: מחיר מקורי (מספר או null)\\n- description: תיאור קצר בעברית\\n- url: קישור למוצר\\n\\nחוקים: רק מחירים ברורים בשקלים. עדיף עם מחיר מקורי ומבצע.\\nהחזר JSON בלבד: [{...}]'
+        ),
+        (
+          'אגרגטור קהילתי',
+          'לאתרי דילים כמו bee.deals, FXP — עם ציון פופולריות',
+          'אתה AI שמחלץ דילים מאתר קהילתי בשם {store}.\\nכלול רק דילים עם לפחות {min_votes} הצבעות ו-{min_comments} תגובות.\\n\\nעבור כל דיל חלץ:\\n- title, deal_price, original_price, description, url\\n- votes: מספר הצבעות (מספר)\\n- comments: מספר תגובות (מספר)\\n- hours_ago: גיל בשעות (מספר)\\n\\nעדף דילים עם הצבעות רבות ביחס לגיל הפוסט (טרנדי).\\nהחזר JSON בלבד: [{...}]'
+        ),
+        (
+          'אלקטרוניקה מתמחה',
+          'לאתרי אלקטרוניקה — מתמקד בגאדג''טים וטכנולוגיה',
+          'אתה מומחה אלקטרוניקה שמחפש דילים טכנולוגיים מ-{store}.\\nחלץ רק: סמארטפונים, מחשבים, אוזניות, מסכים, רכיבים, גאדג''טים.\\nהתעלם ממוצרי לא-טכנולוגיה.\\n\\nעבור כל מוצר: title, deal_price, original_price, description טכני קצר, url.\\nהחזר JSON בלבד: [{...}]'
+        ),
+        (
+          'בינלאומי - המרת מחיר',
+          'לאתרים כמו AliExpress, Banggood — המר USD/EUR ל-₪',
+          'אתה AI לדילים בינלאומיים מ-{store}.\\nחלץ עסקאות ב-USD/EUR והמר ל-₪ (שער: 1 USD ≈ 3.7 ₪, 1 EUR ≈ 4 ₪).\\nכלול רק מוצרים הנשלחים לישראל.\\n\\nשדות: title, deal_price (ב-₪ לאחר המרה), original_price (ב-₪), description, url.\\nציין בתיאור שהמחיר הומר + זמן משלוח משוער.\\nהחזר JSON בלבד: [{...}]'
+        ),
+        (
+          'חיסכון מקסימלי',
+          'מחפש רק הנחות של 20%+ עם מחיר מקורי ברור',
+          'אתה ציד הנחות מ-{store}. חלץ רק מוצרים עם הנחה של 20% ומעלה.\\nחשב: pct = (1 - deal_price/original_price) × 100. דרוש pct >= 20.\\n\\nשדות: title, deal_price, original_price, description, url.\\nמיין לפי אחוז הנחה — הגבוה ביותר קודם.\\nהחזר JSON בלבד: [{...}]'
+        )
+      `);
+      console.log('✅ Seeded default prompt templates');
+    }
+
     // Ensure aggregator sources exist (for existing installs)
     const aggregatorSources = [
       { name: 'bee.deals',     url: 'https://bee.deals/',                                          store: 'bee.deals',  category_name: 'הכל' },
@@ -495,7 +544,12 @@ app.post('/api/admin/hunt', adminAuth, async (req, res) => {
 
 // GET /api/admin/sources
 app.get('/api/admin/sources', adminAuth, async (req, res) => {
-  const [rows] = await db.execute('SELECT * FROM hunter_sources ORDER BY created_at DESC');
+  const [rows] = await db.execute(`
+    SELECT hs.*, hp.name AS prompt_name
+    FROM hunter_sources hs
+    LEFT JOIN hunter_prompts hp ON hp.id = hs.prompt_id
+    ORDER BY hs.created_at DESC
+  `);
   res.json(rows);
 });
 
@@ -512,14 +566,60 @@ app.post('/api/admin/sources', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/sources/:id
 app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
-  const { is_active } = req.body;
-  await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
+  const { is_active, prompt_id } = req.body;
+  if (is_active !== undefined) {
+    await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
+  }
+  if (prompt_id !== undefined) {
+    await db.execute('UPDATE hunter_sources SET prompt_id = ? WHERE id = ?', [prompt_id || null, req.params.id]);
+  }
   res.json({ success: true });
 });
 
 // DELETE /api/admin/sources/:id
 app.delete('/api/admin/sources/:id', adminAuth, async (req, res) => {
   await db.execute('DELETE FROM hunter_sources WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ════════════════════════════════════════════════════════════
+//  HUNTER PROMPTS (admin)
+// ════════════════════════════════════════════════════════════
+
+// GET /api/admin/prompts
+app.get('/api/admin/prompts', adminAuth, async (req, res) => {
+  const [rows] = await db.execute('SELECT * FROM hunter_prompts ORDER BY created_at ASC');
+  res.json(rows);
+});
+
+// POST /api/admin/prompts
+app.post('/api/admin/prompts', adminAuth, async (req, res) => {
+  const { name, description, prompt_text } = req.body;
+  if (!name || !prompt_text) return res.status(400).json({ error: 'name ו-prompt_text חובה' });
+  const [result] = await db.execute(
+    'INSERT INTO hunter_prompts (name, description, prompt_text) VALUES (?,?,?)',
+    [name, description || '', prompt_text]
+  );
+  res.json({ id: result.insertId, name, description: description || '', prompt_text });
+});
+
+// PATCH /api/admin/prompts/:id
+app.patch('/api/admin/prompts/:id', adminAuth, async (req, res) => {
+  const { name, description, prompt_text } = req.body;
+  const fields = [], vals = [];
+  if (name        !== undefined) { fields.push('name=?');        vals.push(name); }
+  if (description !== undefined) { fields.push('description=?'); vals.push(description); }
+  if (prompt_text !== undefined) { fields.push('prompt_text=?'); vals.push(prompt_text); }
+  if (!fields.length) return res.status(400).json({ error: 'nothing to update' });
+  vals.push(req.params.id);
+  await db.execute(`UPDATE hunter_prompts SET ${fields.join(',')} WHERE id=?`, vals);
+  res.json({ success: true });
+});
+
+// DELETE /api/admin/prompts/:id
+app.delete('/api/admin/prompts/:id', adminAuth, async (req, res) => {
+  await db.execute('UPDATE hunter_sources SET prompt_id = NULL WHERE prompt_id = ?', [req.params.id]);
+  await db.execute('DELETE FROM hunter_prompts WHERE id = ?', [req.params.id]);
   res.json({ success: true });
 });
 
