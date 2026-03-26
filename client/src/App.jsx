@@ -302,19 +302,34 @@ export default function App() {
           </div>
 
           {/* Category bar */}
-          <div style={{ marginTop:10,marginBottom:14,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",borderRadius:18,padding:8,backdropFilter:"blur(8px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.08)" }}>
-            <div style={{ display:"flex",gap:8,overflowX:"auto",scrollbarWidth:"none",msOverflowStyle:"none" }}>
-              {["הכל", ...categories.map(c => c.name)].map(c => (
-                <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
-                  style={{ border:activeCategory===c?"1px solid rgba(255,255,255,.22)":"1px solid transparent",borderRadius:22,padding:"8px 18px",fontSize:13,fontWeight:800,whiteSpace:"nowrap",flexShrink:0,
-                    background:activeCategory===c?"#fff":"rgba(255,255,255,.08)",
-                    color:activeCategory===c?"var(--blue)":"rgba(255,255,255,.88)",
-                    boxShadow:activeCategory===c?"0 8px 22px rgba(0,0,0,.16)":"none",
-                    transition:"var(--tr)" }}>
-                  {c}
-                </button>
-              ))}
-            </div>
+          <div style={{ display:"flex",gap:6,overflowX:"auto",padding:"10px 0 14px",scrollbarWidth:"none",msOverflowStyle:"none" }}>
+            {["הכל", ...categories.map(c => c.name)].map(c => (
+              <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
+                style={{
+                  border: activeCategory===c ? "1.5px solid rgba(255,255,255,.55)" : "1.5px solid rgba(255,255,255,.15)",
+                  borderRadius: 999,
+                  padding: "7px 20px",
+                  fontSize: 13,
+                  fontWeight: activeCategory===c ? 800 : 500,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  cursor: "pointer",
+                  letterSpacing: ".01em",
+                  background: activeCategory===c
+                    ? "rgba(255,255,255,.22)"
+                    : "transparent",
+                  color: activeCategory===c ? "#fff" : "rgba(255,255,255,.62)",
+                  backdropFilter: activeCategory===c ? "blur(12px)" : "none",
+                  boxShadow: activeCategory===c
+                    ? "inset 0 1px 0 rgba(255,255,255,.3), 0 8px 20px rgba(0,0,0,.18)"
+                    : "none",
+                  transition: "var(--tr)",
+                }}
+                onMouseEnter={e => { if(activeCategory!==c){ e.currentTarget.style.color="rgba(255,255,255,.9)"; e.currentTarget.style.borderColor="rgba(255,255,255,.3)"; }}}
+                onMouseLeave={e => { if(activeCategory!==c){ e.currentTarget.style.color="rgba(255,255,255,.62)"; e.currentTarget.style.borderColor="rgba(255,255,255,.15)"; }}}>
+                {c}
+              </button>
+            ))}
           </div>
         </div>
       </header>
