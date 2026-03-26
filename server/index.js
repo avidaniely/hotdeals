@@ -167,6 +167,39 @@ const db = mysql.createPool({
   }
 })();
 
+// ── Auto-assign prompts to sources + update intl prompt ──────
+(async () => {
+  try {
+    // Update international prompt with Israel-shipping awareness
+    const intlPrompt = `אתה AI לדילים בינלאומיים מ-{store} עבור קונים ישראלים.\n\nחוקים:\n1. כלול רק מוצרים שניתן לשלוח לישראל (Israel / IL)\n2. חשב deal_price = מחיר המוצר + עלות משלוח לישראל (בשקלים)\n3. המר: 1 USD ≈ 3.7 ₪ | 1 EUR ≈ 4 ₪ | 1 GBP ≈ 4.7 ₪\n4. אם משלוח חינם — deal_price = מחיר המוצר בלבד\n5. אם המוצר לא נשלח לישראל — דלג עליו לחלוטין\n\nעבור כל דיל:\n- title: שם המוצר\n- deal_price: מחיר סופי כולל משלוח לישראל (₪)\n- original_price: מחיר מקורי של המוצר ללא מבצע (₪)\n- description: תיאור קצר + ציין "כולל משלוח ₪XX" או "משלוח חינם"\n- url: קישור למוצר\n- shipping_cost_ils: עלות משלוח לישראל (₪, 0 אם חינם)\n\nהחזר JSON בלבד: [{"title":"...","deal_price":0,"original_price":null,"description":"...","url":"...","shipping_cost_ils":0}]`;
+
+    await db.execute(
+      `UPDATE hunter_prompts SET prompt_text = ? WHERE name = 'בינלאומי - המרת מחיר'`,
+      [intlPrompt]
+    );
+
+    // Auto-assign prompts to sources that have none
+    const promptAssignMap = [
+      { sourceNames: ['KSP','Bug','Zap Deals','Ivory','Amazon IL'],       promptName: 'מרצ\'נט כללי'           },
+      { sourceNames: ['bee.deals','FXP Deals'],                            promptName: 'אגרגטור קהילתי'          },
+      { sourceNames: ['AliExpress IL','Banggood'],                         promptName: 'בינלאומי - המרת מחיר'   },
+    ];
+    for (const { sourceNames, promptName } of promptAssignMap) {
+      const [[prompt]] = await db.execute('SELECT id FROM hunter_prompts WHERE name = ?', [promptName]);
+      if (!prompt) continue;
+      for (const name of sourceNames) {
+        await db.execute(
+          'UPDATE hunter_sources SET prompt_id = ? WHERE name = ? AND (prompt_id IS NULL)',
+          [prompt.id, name]
+        );
+      }
+    }
+    console.log('✅ Prompt auto-assignment done');
+  } catch (e) {
+    console.error('Prompt assignment migration:', e.message);
+  }
+})();
+
 // ── Auto-migrate quality_score column ────────────────────────
 (async () => {
   try {
