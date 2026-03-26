@@ -213,7 +213,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ flex: 1, maxWidth: 420, position: "relative" }} className="desktop-only">
+            <div style={{ flex: 1, maxWidth: 600, position: "relative" }} className="desktop-only">
               <input
                 placeholder="🔍  חפש דילים..."
                 value={search}
