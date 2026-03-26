@@ -169,20 +169,20 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'Assistant','Heebo',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "#f4f5f7", color: "#1a1a2e" }}>
+    <div style={{ fontFamily: "'Assistant','Heebo',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "#eef2fc", color: "#1a1a2e" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        :root{--orange:#ff6b00;--red:#e83030;--blue:#1a73e8;--ice:#4db6ff;--dark:#1a1a2e;--mid:#444466;--border:#e2e4ea;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.14)}
+        :root{--orange:#ff6b00;--red:#e83030;--blue:#0038A8;--il-blue:#0038A8;--ice:#4db6ff;--dark:#1a1a2e;--mid:#3a4a6b;--border:#c8d4f0;--radius:14px;--shadow:0 2px 12px rgba(0,56,168,.09);--shadow-lg:0 8px 32px rgba(0,56,168,.16)}
         button{cursor:pointer;font-family:inherit} input,textarea,select{font-family:inherit}
         .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weight:700;transition:all .2s}
-        .btn-primary{background:var(--orange);color:#fff} .btn-primary:hover{background:#ff8c38;transform:translateY(-1px);box-shadow:0 4px 12px rgba(255,107,0,.35)}
-        .btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)} .btn-ghost:hover{background:#f0f0f4}
+        .btn-primary{background:var(--blue);color:#fff} .btn-primary:hover{background:#0047d1;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,56,168,.35)}
+        .btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)} .btn-ghost:hover{background:#eef2fc}
         .btn-danger{background:#e83030;color:#fff} .btn-danger:hover{background:#c02020}
         .btn-success{background:#1aaa55;color:#fff}
-        .btn-outline{background:transparent;border:2px solid var(--orange);color:var(--orange)} .btn-outline:hover{background:var(--orange);color:#fff}
+        .btn-outline{background:transparent;border:2px solid var(--blue);color:var(--blue)} .btn-outline:hover{background:var(--blue);color:#fff}
         input[type=text],input[type=email],input[type=password],input[type=number],input[type=url],textarea,select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;background:#fafafa;transition:.2s;direction:rtl;color:var(--dark)}
-        input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px rgba(255,107,0,.12)}
+        input:focus,textarea:focus,select:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(0,56,168,.12)}
         label{display:block;font-size:13px;font-weight:700;margin-bottom:5px;color:var(--mid)}
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
         .modal-box{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .25s ease}
@@ -194,22 +194,22 @@ export default function App() {
         .vote-hot{border-color:#ff6b00;color:#ff6b00} .vote-hot.active{background:#ff6b00;color:#fff}
         .vote-cold{border-color:#4db6ff;color:#4db6ff} .vote-cold.active{background:#4db6ff;color:#fff}
         .deal-card{background:#fff;border-radius:16px;border:1px solid var(--border);transition:.2s;overflow:hidden}
-        .deal-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.12);transform:translateY(-2px)}
-        .deal-card.featured{border:2px solid #ff6b00} .deal-card.expired{opacity:.6}
+        .deal-card:hover{box-shadow:0 8px 28px rgba(0,56,168,.13);transform:translateY(-2px)}
+        .deal-card.featured{border:2px solid var(--blue)} .deal-card.expired{opacity:.6}
         .badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
         ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#f1f1f1} ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
         @media(max-width:768px){.desktop-only{display:none!important}.main-grid{grid-template-columns:1fr!important}.sidebar{display:none}}
       `}</style>
 
       {/* HEADER */}
-      <header style={{ background: "#1a1a2e", color: "#fff", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,0,0,.3)" }}>
+      <header style={{ background: "#0038A8", color: "#fff", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,28,84,.4)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, height: 64, justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 28 }}>🔥</div>
+              <div style={{ fontSize: 30 }}>🇮🇱</div>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>HOT<span style={{ color: "var(--orange)" }}>דילים</span></div>
-                <div style={{ fontSize: 11, color: "#aaa" }}>קהילת הדילים הטובה בישראל</div>
+                <div style={{ fontWeight: 900, fontSize: 22, color: "#fff" }}>HOT<span style={{ color: "#7ec8ff" }}>דילים</span></div>
+                <div style={{ fontSize: 11, color: "#a8c4f0" }}>קהילת הדילים הישראלית</div>
               </div>
             </div>
 
@@ -226,7 +226,7 @@ export default function App() {
               {user ? (
                 <>
                   {user.role === "admin" && (
-                    <button className="btn btn-outline" style={{ borderColor: "#ffcc00", color: "#ffcc00", padding: "8px 14px", fontSize: 13 }}
+                    <button className="btn btn-outline" style={{ borderColor: "#fff", color: "#fff", padding: "8px 14px", fontSize: 13 }}
                       onClick={() => { setModal("admin"); loadAdmin(); }}>
                       ⚙️ ניהול
                       {adminStats?.pending > 0 && <span style={{ background: "#e83030", color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>{adminStats.pending}</span>}
@@ -237,7 +237,7 @@ export default function App() {
                     <span style={{ fontSize: 20 }}>{user.avatar}</span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 700 }}>{user.username}</div>
-                      {user.role === "admin" && <div style={{ fontSize: 10, color: "#ffcc00" }}>מנהל</div>}
+                      {user.role === "admin" && <div style={{ fontSize: 10, color: "#a8c4f0" }}>מנהל</div>}
                     </div>
                     <button onClick={logout} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", borderRadius: 6, padding: "4px 8px", fontSize: 11 }}>יציאה</button>
                   </div>
@@ -256,8 +256,8 @@ export default function App() {
             {["הכל", ...categories.map(c => c.name)].map(c => (
               <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
                 style={{ border: "none", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-                  background: activeCategory === c ? "var(--orange)" : "rgba(255,255,255,.1)",
-                  color: activeCategory === c ? "#fff" : "rgba(255,255,255,.7)", transition: ".2s" }}>
+                  background: activeCategory === c ? "#fff" : "rgba(255,255,255,.15)",
+                  color: activeCategory === c ? "var(--blue)" : "rgba(255,255,255,.85)", transition: ".2s" }}>
                 {c}
               </button>
             ))}
@@ -275,7 +275,7 @@ export default function App() {
               {[["hot","🔥 הכי חמים"],["new","🆕 חדשים"]].map(([id, label]) => (
                 <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
                   style={{ border: "none", borderRadius: 10, padding: "8px 18px", fontWeight: 700, fontSize: 14,
-                    background: activeTab === id ? "var(--orange)" : "transparent",
+                    background: activeTab === id ? "var(--blue)" : "transparent",
                     color: activeTab === id ? "#fff" : "var(--mid)" }}>
                   {label}
                 </button>
@@ -310,7 +310,7 @@ export default function App() {
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                       <button key={p} onClick={() => setPage(p)}
                         style={{ width: 36, height: 36, borderRadius: 8, border: "1.5px solid var(--border)",
-                          background: p === page ? "var(--orange)" : "#fff",
+                          background: p === page ? "var(--blue)" : "#fff",
                           color: p === page ? "#fff" : "var(--mid)", fontWeight: 700, fontSize: 14 }}>
                         {p}
                       </button>
@@ -329,7 +329,7 @@ export default function App() {
                 {[["🔥 סה״כ דילים",adminStats.total_deals],["⏳ ממתינים",adminStats.pending],["👥 משתמשים",adminStats.total_users],["💬 תגובות",adminStats.total_comments],["⭐ מוצגות",adminStats.featured]].map(([l,v])=>(
                   <div key={l} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border)" }}>
                     <span style={{ color:"var(--mid)",fontSize:14 }}>{l}</span>
-                    <span style={{ fontWeight:800,fontSize:18,color:"var(--orange)" }}>{v}</span>
+                    <span style={{ fontWeight:800,fontSize:18,color:"var(--blue)" }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -344,7 +344,7 @@ export default function App() {
                   <span style={{ fontWeight:900,fontSize:18,color:i===0?"#ffcc00":"var(--mid)",minWidth:24 }}>#{i+1}</span>
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:13,fontWeight:600,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180 }}>{d.title}</div>
-                    <div style={{ fontSize:12,color:"var(--orange)",fontWeight:800 }}>₪{(+d.deal_price).toLocaleString()}</div>
+                    <div style={{ fontSize:12,color:"var(--blue)",fontWeight:800 }}>₪{(+d.deal_price).toLocaleString()}</div>
                   </div>
                   <div style={{ fontSize:11,fontWeight:700,color:"#ff6b00" }}>🔥{d.hot-d.cold}</div>
                 </div>
@@ -352,11 +352,11 @@ export default function App() {
             </div>
 
             {!user && (
-              <div style={{ background: "linear-gradient(135deg,#ff6b00,#ff2d2d)", borderRadius: 16, padding: 20, color: "#fff", textAlign: "center" }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🔥</div>
+              <div style={{ background: "linear-gradient(135deg,#0038A8,#1565C0)", borderRadius: 16, padding: 20, color: "#fff", textAlign: "center" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🇮🇱</div>
                 <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 8 }}>הצטרף לקהילה!</div>
                 <div style={{ fontSize: 13, marginBottom: 16, opacity: 0.9 }}>שתף דילים, הצבע, וחסוך כסף</div>
-                <button className="btn" onClick={() => setModal("register")} style={{ background: "#fff", color: "var(--orange)", width: "100%", justifyContent: "center", fontWeight: 800 }}>הצטרף בחינם</button>
+                <button className="btn" onClick={() => setModal("register")} style={{ background: "#fff", color: "var(--blue)", width: "100%", justifyContent: "center", fontWeight: 800 }}>הצטרף בחינם</button>
               </div>
             )}
           </div>
@@ -514,7 +514,7 @@ function DealModal({ deal, currentUser, onVote, onComment, onClose }) {
               </div>
             </div>
           ) : (
-            <div style={{ background:"#fff8f0",border:"1px dashed var(--orange)",borderRadius:12,padding:14,textAlign:"center",fontSize:14,color:"var(--mid)" }}>
+            <div style={{ background:"#f0f5ff",border:"1px dashed var(--blue)",borderRadius:12,padding:14,textAlign:"center",fontSize:14,color:"var(--mid)" }}>
               🔐 התחבר כדי להוסיף תגובה
             </div>
           )}
@@ -532,7 +532,7 @@ function LoginModal({ onLogin, onClose, onRegister }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box" style={{ maxWidth:400 }}>
         <div style={{ textAlign:"center",marginBottom:24 }}>
-          <div style={{ fontSize:48,marginBottom:8 }}>🔥</div>
+          <div style={{ fontSize:48,marginBottom:8 }}>🇮🇱</div>
           <h2 style={{ fontWeight:900,fontSize:24 }}>ברוך הבא!</h2>
           <p style={{ color:"var(--mid)",fontSize:14,marginTop:4 }}>התחבר כדי להצביע ולשתף דילים</p>
         </div>
@@ -542,7 +542,7 @@ function LoginModal({ onLogin, onClose, onRegister }) {
           <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }} onClick={() => onLogin(username,password)}>כניסה</button>
           <div style={{ textAlign:"center",fontSize:14,color:"var(--mid)" }}>
             אין לך חשבון?{" "}
-            <button onClick={onRegister} style={{ background:"none",border:"none",color:"var(--orange)",fontWeight:700,fontSize:14,cursor:"pointer" }}>הירשם עכשיו</button>
+            <button onClick={onRegister} style={{ background:"none",border:"none",color:"var(--blue)",fontWeight:700,fontSize:14,cursor:"pointer" }}>הירשם עכשיו</button>
           </div>
         </div>
       </div>
@@ -568,7 +568,7 @@ function RegisterModal({ onRegister, onClose, onLogin }) {
           <button className="btn btn-primary" style={{ width:"100%",justifyContent:"center",padding:14,fontSize:16 }} onClick={() => onRegister(username,email,password)}>🚀 יצירת חשבון</button>
           <div style={{ textAlign:"center",fontSize:14,color:"var(--mid)" }}>
             כבר יש לך חשבון?{" "}
-            <button onClick={onLogin} style={{ background:"none",border:"none",color:"var(--orange)",fontWeight:700,fontSize:14,cursor:"pointer" }}>כניסה</button>
+            <button onClick={onLogin} style={{ background:"none",border:"none",color:"var(--blue)",fontWeight:700,fontSize:14,cursor:"pointer" }}>כניסה</button>
           </div>
         </div>
       </div>
