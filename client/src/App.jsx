@@ -137,7 +137,6 @@ export default function App() {
     try {
       const deal = await dealsAPI.get(id);
       setSelectedDeal(deal);
-      setModal("deal");
     } catch (e) { showToast(e.message, "error"); }
   };
 
@@ -266,6 +265,11 @@ export default function App() {
       </header>
 
       {/* MAIN */}
+      {selectedDeal ? (
+        <DealPage deal={selectedDeal} currentUser={user} onVote={vote} onComment={addComment}
+          onBack={() => setSelectedDeal(null)} isAdmin={user?.role === "admin"}
+          onAdminUpdate={adminUpdateDeal} onAdminDelete={adminDeleteDeal} />
+      ) : (
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }} className="main-grid">
           {/* Feed */}
@@ -362,14 +366,12 @@ export default function App() {
           </div>
         </div>
       </main>
+      )}
 
       {/* MODALS */}
       {modal === "login"    && <LoginModal onLogin={login} onClose={() => setModal(null)} onRegister={() => setModal("register")} />}
       {modal === "register" && <RegisterModal onRegister={register} onClose={() => setModal(null)} onLogin={() => setModal("login")} />}
       {modal === "newdeal"  && <NewDealModal categories={categories} onSubmit={submitDeal} onClose={() => setModal(null)} />}
-      {modal === "deal"     && selectedDeal && (
-        <DealModal deal={selectedDeal} currentUser={user} onVote={vote} onComment={addComment} onClose={() => setModal(null)} />
-      )}
       {modal === "admin" && user?.role === "admin" && (
         <AdminPanel
           tab={adminTab} onTab={setAdminTab}
@@ -614,6 +616,141 @@ function NewDealModal({ categories, onSubmit, onClose }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Deal Page ────────────────────────────────────────────────────────────────
+function DealPage({ deal, currentUser, onVote, onComment, onBack, isAdmin, onAdminUpdate, onAdminDelete }) {
+  const [comment, setComment] = useState("");
+  const temp = getTemp(+deal.hot, +deal.cold);
+  const discount = pct(+deal.deal_price, +deal.original_price);
+  const totalVotes = +deal.hot + +deal.cold;
+
+  return (
+    <main style={{ maxWidth: 860, margin: "0 auto", padding: "24px 20px" }}>
+      {/* Back */}
+      <button onClick={onBack} style={{ display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:"1.5px solid var(--border)",borderRadius:10,padding:"8px 16px",fontSize:14,fontWeight:700,color:"var(--mid)",cursor:"pointer",marginBottom:24 }}>
+        → חזרה לדילים
+      </button>
+
+      {/* Hero image */}
+      <div style={{ width:"100%",height:320,borderRadius:18,overflow:"hidden",marginBottom:24,boxShadow:"var(--shadow-lg)" }}>
+        <img src={deal.image_url || "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&q=80"} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} />
+      </div>
+
+      {/* Badges */}
+      <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:14 }}>
+        <span className="badge" style={{ background:temp.bg,color:temp.color,fontSize:14,padding:"5px 14px" }}>{temp.label}</span>
+        {deal.is_featured && <span className="badge" style={{ background:"#fff8e1",color:"#f59c00" }}>⭐ מוצגת</span>}
+        {deal.is_expired && <span className="badge" style={{ background:"#fee",color:"#e83030" }}>⏰ פג תוקף</span>}
+        {!deal.is_approved && <span className="badge" style={{ background:"#e3f2fd",color:"var(--blue)" }}>⏳ ממתין לאישור</span>}
+        <span className="badge" style={{ background:"#eef2fc",color:"var(--mid)" }}>{deal.category}</span>
+      </div>
+
+      {/* Title */}
+      <h1 style={{ fontWeight:900,fontSize:28,lineHeight:1.3,marginBottom:20 }}>{deal.title}</h1>
+
+      {/* Price + CTA */}
+      <div style={{ background:"#fff",borderRadius:16,padding:24,marginBottom:20,border:"1px solid var(--border)",boxShadow:"var(--shadow)",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap" }}>
+        <div>
+          <div style={{ fontSize:12,color:"var(--mid)",marginBottom:2 }}>מחיר עסקה</div>
+          <div style={{ fontWeight:900,fontSize:38,color:"var(--orange)",lineHeight:1 }}>₪{(+deal.deal_price).toLocaleString()}</div>
+        </div>
+        {deal.original_price > deal.deal_price && (
+          <div>
+            <div style={{ fontSize:12,color:"var(--mid)",marginBottom:2 }}>מחיר מקורי</div>
+            <div style={{ textDecoration:"line-through",fontSize:22,color:"#aaa" }}>₪{(+deal.original_price).toLocaleString()}</div>
+          </div>
+        )}
+        {discount > 0 && (
+          <div style={{ background:"#fff0e0",color:"var(--orange)",borderRadius:12,padding:"10px 18px",fontWeight:900,fontSize:20 }}>
+            חיסכון {discount}%
+          </div>
+        )}
+        <a href={deal.url} target="_blank" rel="noreferrer" style={{ marginRight:"auto",textDecoration:"none" }}>
+          <button className="btn btn-primary" style={{ fontSize:16,padding:"14px 32px",borderRadius:12 }}>🛒 לחנות</button>
+        </a>
+      </div>
+
+      {/* Votes + progress */}
+      <div style={{ background:"#fff",borderRadius:16,padding:20,marginBottom:20,border:"1px solid var(--border)",boxShadow:"var(--shadow)" }}>
+        <div style={{ display:"flex",gap:12,marginBottom:16 }}>
+          <button className="vote-btn vote-hot" style={{ flex:1,justifyContent:"center",fontSize:16,padding:"12px" }} onClick={() => onVote(deal.id,"hot")}>
+            🔥 חם! <span style={{ fontWeight:900,fontSize:20,marginRight:6 }}>{deal.hot}</span>
+          </button>
+          <button className="vote-btn vote-cold" style={{ flex:1,justifyContent:"center",fontSize:16,padding:"12px" }} onClick={() => onVote(deal.id,"cold")}>
+            🧊 קר <span style={{ fontWeight:900,fontSize:20,marginRight:6 }}>{deal.cold}</span>
+          </button>
+        </div>
+        <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--mid)",marginBottom:6 }}>
+          <span>🔥 חם ({deal.hot})</span><span>🧊 קר ({deal.cold})</span>
+        </div>
+        <div style={{ height:8,borderRadius:4,background:"#e8edf8",overflow:"hidden" }}>
+          <div style={{ height:"100%",borderRadius:4,transition:".5s",width:`${Math.round(+deal.hot/Math.max(totalVotes,1)*100)}%`,background:"linear-gradient(to left,#ff6b00,#ff2d2d)" }} />
+        </div>
+      </div>
+
+      {/* Meta */}
+      <div style={{ display:"flex",gap:20,fontSize:13,color:"var(--mid)",marginBottom:20,flexWrap:"wrap",background:"#fff",borderRadius:14,padding:"14px 20px",border:"1px solid var(--border)" }}>
+        <span style={{ display:"flex",alignItems:"center",gap:6 }}>{deal.avatar} <strong>{deal.username}</strong></span>
+        <span>📦 {deal.store}</span>
+        <span>🕐 {timeAgo(deal.created_at)}</span>
+      </div>
+
+      {/* Description */}
+      {deal.description && (
+        <div style={{ background:"#fff",borderRadius:14,padding:20,marginBottom:20,border:"1px solid var(--border)",lineHeight:1.8,color:"var(--mid)",fontSize:15 }}>
+          {deal.description}
+        </div>
+      )}
+
+      {/* Admin actions */}
+      {isAdmin && (
+        <div style={{ display:"flex",gap:8,marginBottom:20,flexWrap:"wrap" }}>
+          {!deal.is_approved && <button className="btn btn-success" style={{ padding:"8px 16px" }} onClick={() => onAdminUpdate(deal.id,{is_approved:1})}>✅ אשר</button>}
+          <button className="btn btn-ghost" style={{ padding:"8px 16px" }} onClick={() => onAdminUpdate(deal.id,{is_featured:deal.is_featured?0:1})}>{deal.is_featured?"⭐ הסר הצגה":"⭐ הצג"}</button>
+          <button className="btn btn-ghost" style={{ padding:"8px 16px" }} onClick={() => onAdminUpdate(deal.id,{is_expired:deal.is_expired?0:1})}>{deal.is_expired?"🔄 שחזר":"⏰ סמן כפג"}</button>
+          <button className="btn btn-danger" style={{ padding:"8px 16px" }} onClick={() => { onAdminDelete(deal.id); onBack(); }}>🗑️ מחק</button>
+        </div>
+      )}
+
+      {/* Comments */}
+      <div style={{ background:"#fff",borderRadius:16,padding:24,border:"1px solid var(--border)",boxShadow:"var(--shadow)" }}>
+        <h3 style={{ fontWeight:800,fontSize:18,marginBottom:18 }}>💬 תגובות ({deal.comments?.length || 0})</h3>
+        <div style={{ maxHeight:360,overflowY:"auto",marginBottom:16 }}>
+          {!deal.comments?.length && (
+            <div style={{ color:"var(--mid)",textAlign:"center",padding:32,fontSize:14 }}>היה הראשון להגיב! 🎤</div>
+          )}
+          {deal.comments?.map(c => (
+            <div key={c.id} style={{ display:"flex",gap:12,marginBottom:16 }}>
+              <span style={{ fontSize:28,flexShrink:0 }}>{c.avatar}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:4 }}>
+                  <span style={{ fontWeight:700,fontSize:13 }}>{c.username}</span>
+                  <span style={{ color:"#aaa",fontSize:11 }}>{timeAgo(c.created_at)}</span>
+                </div>
+                <div style={{ background:"#eef2fc",borderRadius:10,padding:"10px 14px",fontSize:14 }}>{c.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {currentUser ? (
+          <div style={{ display:"flex",gap:10 }}>
+            <span style={{ fontSize:28,flexShrink:0 }}>{currentUser.avatar}</span>
+            <div style={{ flex:1,display:"flex",gap:8 }}>
+              <input value={comment} onChange={e => setComment(e.target.value)}
+                onKeyDown={e => e.key==="Enter" && comment.trim() && (onComment(deal.id,comment),setComment(""))}
+                placeholder="כתוב תגובה..." style={{ flex:1 }} />
+              <button className="btn btn-primary" onClick={() => { onComment(deal.id,comment); setComment(""); }} style={{ padding:"10px 18px" }}>שלח</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ background:"#f0f5ff",border:"1px dashed var(--blue)",borderRadius:12,padding:14,textAlign:"center",fontSize:14,color:"var(--mid)" }}>
+            🔐 התחבר כדי להוסיף תגובה
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
 
