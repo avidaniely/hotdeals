@@ -2,7 +2,7 @@
 //  App.jsx  –  hotILdeals  (connected to MySQL backend)
 //  Place in:  client/src/App.jsx
 // ============================================================
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   authAPI, dealsAPI, commentsAPI, categoriesAPI, adminAPI, hunterAPI,
   saveToken, clearToken, getToken,
@@ -1360,32 +1360,53 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                     </thead>
                     <tbody>
                       {logs.map(log => {
-                        const errs = log.errors ? (() => { try { return JSON.parse(log.errors); } catch { return [log.errors]; } })() : [];
+                        const errs = log.errors ? (() => { try { return JSON.parse(log.errors); } catch(e) { return [log.errors]; } })() : [];
                         return (
-                          <tr key={log.id} style={{ borderBottom:"1px solid var(--border)" }}
-                            onMouseEnter={e=>e.currentTarget.style.background="var(--surface-2)"}
-                            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                            <td style={{ padding:"10px 14px",color:"var(--text)",whiteSpace:"nowrap" }}>
-                              {new Date(log.run_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'})}
-                            </td>
-                            <td style={{ padding:"10px 14px" }}>
-                              <span style={{ padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,
-                                background:log.triggered_by==='manual'?"#EEF2FC":"#F0FFF7",
-                                color:log.triggered_by==='manual'?"var(--blue)":"var(--success)" }}>
-                                {log.triggered_by==='manual' ? '👤 ידני' : '🤖 אוטומטי'}
-                              </span>
-                            </td>
-                            <td style={{ padding:"10px 14px",fontWeight:700,color:"var(--success)" }}>{log.total_found}</td>
-                            <td style={{ padding:"10px 14px",color:"var(--text-2)" }}>{log.total_skipped}</td>
-                            <td style={{ padding:"10px 14px" }}>
-                              {errs.length > 0 ? (
-                                <span title={errs.join('\n')} style={{ color:"var(--danger)",fontWeight:700,cursor:"help" }}>⚠️ {errs.length}</span>
-                              ) : (
-                                <span style={{ color:"var(--success)" }}>✅ 0</span>
-                              )}
-                            </td>
-                            <td style={{ padding:"10px 14px",color:"var(--text-2)" }}>{log.duration_seconds}s</td>
-                          </tr>
+                          <React.Fragment key={log.id}>
+                            <tr style={{ borderBottom: errs.length > 0 ? "none" : "1px solid var(--border)" }}>
+                              <td style={{ padding:"10px 14px",color:"var(--text)",whiteSpace:"nowrap" }}>
+                                {new Date(log.run_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'})}
+                              </td>
+                              <td style={{ padding:"10px 14px" }}>
+                                <span style={{ padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,
+                                  background:log.triggered_by==='manual'?"#EEF2FC":"#F0FFF7",
+                                  color:log.triggered_by==='manual'?"var(--blue)":"var(--success)" }}>
+                                  {log.triggered_by==='manual' ? '👤 ידני' : '🤖 אוטומטי'}
+                                </span>
+                              </td>
+                              <td style={{ padding:"10px 14px",fontWeight:700,color:"var(--success)" }}>{log.total_found}</td>
+                              <td style={{ padding:"10px 14px",color:"var(--text-2)" }}>{log.total_skipped}</td>
+                              <td style={{ padding:"10px 14px" }}>
+                                {errs.length > 0 ? (
+                                  <span style={{ color:"var(--danger)",fontWeight:700 }}>⚠️ {errs.length}</span>
+                                ) : (
+                                  <span style={{ color:"var(--success)" }}>✅ 0</span>
+                                )}
+                              </td>
+                              <td style={{ padding:"10px 14px",color:"var(--text-2)" }}>{log.duration_seconds}s</td>
+                            </tr>
+                            {errs.length > 0 && (
+                              <tr style={{ borderBottom:"1px solid var(--border)" }}>
+                                <td colSpan={6} style={{ padding:"0 14px 12px 14px" }}>
+                                  <div style={{ background:"#FFF5F5",border:"1px solid #FFCCCC",borderRadius:10,padding:"10px 14px" }}>
+                                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
+                                      <div style={{ fontSize:11,fontWeight:800,color:"var(--danger)" }}>שגיאות:</div>
+                                      <button
+                                        onClick={() => navigator.clipboard.writeText(errs.join('\n'))}
+                                        style={{ fontSize:11,padding:"3px 10px",borderRadius:6,border:"1px solid #FFAAAA",background:"#fff",color:"var(--danger)",cursor:"pointer",fontWeight:700 }}>
+                                        📋 העתק
+                                      </button>
+                                    </div>
+                                    {errs.map((err, i) => (
+                                      <div key={i} style={{ fontSize:12,color:"#c62828",fontFamily:"monospace",lineHeight:1.7,wordBreak:"break-all" }}>
+                                        • {err}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       })}
                     </tbody>
