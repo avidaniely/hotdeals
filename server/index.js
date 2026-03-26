@@ -95,6 +95,25 @@ const db = mysql.createPool({
   }
 })();
 
+// ── Auto-migrate hunter_logs ──────────────────────────────────
+(async () => {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS hunter_logs (
+        id               INT AUTO_INCREMENT PRIMARY KEY,
+        run_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        triggered_by     VARCHAR(20)  NOT NULL DEFAULT 'manual',
+        total_found      INT          NOT NULL DEFAULT 0,
+        total_skipped    INT          NOT NULL DEFAULT 0,
+        errors           TEXT,
+        duration_seconds INT          NOT NULL DEFAULT 0
+      )
+    `);
+  } catch (e) {
+    console.error('hunter_logs migration error:', e.message);
+  }
+})();
+
 // ── Auth Middleware ──────────────────────────────────────────
 const auth = async (req, res, next) => {
   const header = req.headers.authorization;
@@ -427,7 +446,7 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
 // POST /api/admin/hunt  — trigger manually from admin panel
 app.post('/api/admin/hunt', adminAuth, async (req, res) => {
   try {
-    const result = await runHunter(db);
+    const result = await runHunter(db, 'manual');
     res.json(result);
   } catch (e) {
     console.error(e);
@@ -496,6 +515,18 @@ app.patch('/api/admin/hunter-config', adminAuth, async (req, res) => {
     );
   }
   res.json({ success: true });
+});
+
+// ════════════════════════════════════════════════════════════
+//  HUNTER LOGS (admin)
+// ════════════════════════════════════════════════════════════
+
+// GET /api/admin/hunter-logs
+app.get('/api/admin/hunter-logs', adminAuth, async (req, res) => {
+  const [rows] = await db.execute(
+    'SELECT * FROM hunter_logs ORDER BY run_at DESC LIMIT 100'
+  );
+  res.json(rows);
 });
 
 // ── Start ────────────────────────────────────────────────────

@@ -74,7 +74,7 @@ async function submitDeal(deal, source, categoryId, adminId, db) {
 }
 
 // ── Main runner ───────────────────────────────────────────────
-async function runHunter(db) {
+async function runHunter(db, triggeredBy = 'auto') {
   const startTime = Date.now();
   console.log('🤖 Deal Hunter started at', new Date().toLocaleString('he-IL'));
 
@@ -117,6 +117,12 @@ async function runHunter(db) {
 
   const duration = Math.round((Date.now() - startTime) / 1000);
   console.log(`🤖 Done — ${found} new, ${skipped} skipped, ${errors.length} errors (${duration}s)`);
+  try {
+    await db.execute(
+      'INSERT INTO hunter_logs (triggered_by, total_found, total_skipped, errors, duration_seconds) VALUES (?, ?, ?, ?, ?)',
+      [triggeredBy, found, skipped, errors.length ? JSON.stringify(errors) : null, duration]
+    );
+  } catch (logErr) { console.warn('Failed to write hunter log:', logErr.message); }
   return { found, skipped, errors, duration };
 }
 

@@ -98,4 +98,5 @@ export const hunterAPI = {
   run:          ()                    => api('/admin/hunt', { method: 'POST' }),
   getConfig:    ()                    => api('/admin/hunter-config'),
   saveConfig:   (body)                => api('/admin/hunter-config', { method: 'PATCH', body }),
+  getLogs:      ()                    => api('/admin/hunter-logs'),
 };
