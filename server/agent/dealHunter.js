@@ -92,6 +92,21 @@ function extractText(html) {
   return $('body').text().replace(/\s+/g, ' ').trim().slice(0, 7000);
 }
 
+// ── Search via DuckDuckGo ─────────────────────────────────────
+async function searchDeals(query, vpnProxy = null) {
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=il-he`;
+  const html = await fetchPage(url, [], vpnProxy);
+  const $ = cheerio.load(html);
+  const results = [];
+  $('.result').each((_, el) => {
+    const title   = $(el).find('.result__title').text().trim();
+    const snippet = $(el).find('.result__snippet').text().trim();
+    const href    = $(el).find('.result__url').text().trim();
+    if (title) results.push(`• ${title}\n  ${snippet}\n  ${href}`);
+  });
+  return results.slice(0, 20).join('\n\n');
+}
+
 // ── AI extraction ─────────────────────────────────────────────
 async function extractDealsWithAI(pageText, source, config) {
   const apiKey = config.ai_api_key || process.env.ANTHROPIC_API_KEY;
@@ -101,10 +116,17 @@ async function extractDealsWithAI(pageText, source, config) {
     'You are a deal extraction AI for hotILdeals.\n' +
     'Analyze the text from {store} and find the 3-5 best deals.\n' +
     'For each deal return: title, deal_price (number, ₪), original_price (number or null), description (short, Hebrew preferred), url.\n' +
-    'Rules: only clear prices in ₪. Prefer deals with both original and sale price.\n' +
+    'Rules: only clear prices in ₪. Prefer deals with both original and sale price. Extract real URLs from the text.\n' +
     'Return JSON only: [{...}]';
 
-  const basePrompt = source.custom_prompt || DEFAULT_PROMPT;
+  const DEFAULT_SEARCH_PROMPT =
+    'You are a deal extraction AI for hotILdeals.\n' +
+    'Below are search results for deals from {store}. Extract the 3-5 best deals you can identify.\n' +
+    'For each deal return: title, deal_price (number, ₪), original_price (number or null), description (short, Hebrew preferred), url.\n' +
+    'Rules: only include deals with a clear price. Use the URL from the search result.\n' +
+    'Return JSON only: [{...}]';
+
+  const basePrompt = source.custom_prompt || (source.use_search ? DEFAULT_SEARCH_PROMPT : DEFAULT_PROMPT);
   const prompt = basePrompt
     .replace('{store}', source.store)
     .replace('{min_votes}', config.min_votes || '5')
@@ -216,10 +238,18 @@ async function runHunter(db, triggeredBy = 'auto', sourceId = null) {
   for (const source of sources) {
     source.categoryName = source.category_name;
     const useVpn = source.use_proxy && vpnProxy;
+    const useSearch = source.use_search;
     try {
-      console.log(`  🔍 Scraping ${source.name}${useVpn ? ' [VPN]' : ''}...`);
-      const html  = await fetchPage(source.url, proxies, useVpn ? vpnProxy : null);
-      const text  = extractText(html);
+      const mode = useSearch ? '🔎 search' : `🔍 scrape${useVpn ? ' [VPN]' : ''}`;
+      console.log(`  ${mode} ${source.name}...`);
+      let text;
+      if (useSearch) {
+        const query = source.search_query || `${source.store} מבצע deals`;
+        text = await searchDeals(query, useVpn ? vpnProxy : null);
+      } else {
+        const html = await fetchPage(source.url, proxies, useVpn ? vpnProxy : null);
+        text = extractText(html);
+      }
       const deals = await extractDealsWithAI(text, source, config);
       const [[cat]] = await db.execute('SELECT id FROM categories WHERE name = ?', [source.categoryName]);
       const categoryId = cat?.id || 1;

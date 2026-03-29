@@ -74,6 +74,12 @@ const db = mysql.createPool({
     await db.execute('ALTER TABLE hunter_sources ADD COLUMN use_proxy TINYINT(1) NOT NULL DEFAULT 0')
       .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
 
+    // Add search columns to hunter_sources (existing installs)
+    await db.execute('ALTER TABLE hunter_sources ADD COLUMN use_search TINYINT(1) NOT NULL DEFAULT 0')
+      .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
+    await db.execute('ALTER TABLE hunter_sources ADD COLUMN search_query VARCHAR(255) DEFAULT NULL')
+      .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
+
     // hunter_prompts table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS hunter_prompts (
@@ -624,12 +630,15 @@ app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
     await db.execute('UPDATE hunter_sources SET prompt_id = ? WHERE id = ?', [prompt_id || null, req.params.id]);
   if (use_proxy !== undefined)
     await db.execute('UPDATE hunter_sources SET use_proxy = ? WHERE id = ?', [use_proxy ? 1 : 0, req.params.id]);
-  if (name !== undefined || url !== undefined || store !== undefined || category_name !== undefined) {
+  if (name !== undefined || url !== undefined || store !== undefined || category_name !== undefined || use_search !== undefined || search_query !== undefined) {
+    const { use_search: us, search_query: sq } = req.body;
     const fields = [], vals = [];
     if (name          !== undefined) { fields.push('name=?');          vals.push(name); }
     if (url           !== undefined) { fields.push('url=?');           vals.push(url); }
     if (store         !== undefined) { fields.push('store=?');         vals.push(store); }
     if (category_name !== undefined) { fields.push('category_name=?'); vals.push(category_name); }
+    if (us            !== undefined) { fields.push('use_search=?');    vals.push(us ? 1 : 0); }
+    if (sq            !== undefined) { fields.push('search_query=?');  vals.push(sq || null); }
     vals.push(req.params.id);
     await db.execute(`UPDATE hunter_sources SET ${fields.join(',')} WHERE id=?`, vals);
   }

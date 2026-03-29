@@ -1002,6 +1002,10 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     setSources(s => s.map(x => x.id === id ? { ...x, ...editSrcData } : x));
     setEditingSrc(null);
   };
+  const toggleSearch = async (id, cur) => {
+    await hunterAPI.updateSource(id, { use_search: cur ? 0 : 1 });
+    setSources(s => s.map(x => x.id === id ? { ...x, use_search: cur ? 0 : 1 } : x));
+  };
   const deleteSource = async (id) => {
     await hunterAPI.deleteSource(id);
     setSources(s => s.filter(x => x.id !== id));
@@ -1266,6 +1270,12 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                           background:src.use_proxy?"#e8f0ff":"var(--surface-3)",color:src.use_proxy?"#002A8A":"var(--text-3)" }}>
                         {src.use_proxy ? "🔒 VPN" : "🌍 ישיר"}
                       </button>
+                      <button onClick={() => toggleSearch(src.id, src.use_search)}
+                        title={src.use_search ? "מצב חיפוש פעיל — לחץ לכיבוי" : "לחץ להפעלת מצב חיפוש (DuckDuckGo)"}
+                        style={{ padding:"5px 12px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                          background:src.use_search?"#fff8e1":"var(--surface-3)",color:src.use_search?"#e65100":"var(--text-3)" }}>
+                        {src.use_search ? "🔎 חיפוש" : "📄 סריקה"}
+                      </button>
                       <button
                         onClick={() => runSourceNow(src.id)}
                         disabled={huntingSource === src.id || hunting}
@@ -1274,7 +1284,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                         {huntingSource === src.id ? "🔍..." : "▶ הרץ"}
                       </button>
                       <button className="btn btn-ghost" style={{ padding:"5px 9px",fontSize:12 }}
-                        onClick={() => { setEditingSrc(editingSrc===src.id?null:src.id); setEditSrcData({ name:src.name, url:src.url, store:src.store, category_name:src.category_name }); }}>
+                        onClick={() => { setEditingSrc(editingSrc===src.id?null:src.id); setEditSrcData({ name:src.name, url:src.url, store:src.store, category_name:src.category_name, search_query:src.search_query||'' }); }}>
                         ✏️
                       </button>
                       <button className="btn btn-danger" style={{ padding:"5px 9px",fontSize:12 }} onClick={() => deleteSource(src.id)}>🗑️</button>
@@ -1294,6 +1304,14 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                           </select>
                         </div>
                       </div>
+                      {src.use_search && (
+                        <div style={{ marginBottom:12 }}>
+                          <label style={fieldLabel}>שאילתת חיפוש (DuckDuckGo)</label>
+                          <input value={editSrcData.search_query||''} onChange={e=>setEditSrcData(d=>({...d,search_query:e.target.value}))}
+                            placeholder={`${src.store} מבצע deals`} style={{...inputStyle,direction:"ltr"}} />
+                          <div style={{ fontSize:11,color:"var(--text-3)",marginTop:4 }}>לדוגמה: <code>amazon.co.il deals ₪</code> · השאר ריק לברירת מחדל</div>
+                        </div>
+                      )}
                       <div style={{ display:"flex",gap:8 }}>
                         <button className="btn btn-primary" style={{ padding:"7px 20px",fontSize:13 }} onClick={() => saveEditSrc(src.id)}>💾 שמור</button>
                         <button className="btn btn-ghost" style={{ padding:"7px 14px",fontSize:13 }} onClick={() => setEditingSrc(null)}>ביטול</button>
