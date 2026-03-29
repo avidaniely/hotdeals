@@ -1535,7 +1535,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                   <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                     <thead>
                       <tr style={{ background:"var(--surface-2)",borderBottom:"2px solid var(--border)" }}>
-                        {["תאריך ושעה","מופעל ע״י","נמצאו","כפולים","שגיאות","זמן"].map(h => (
+                        {["תאריך ושעה","מופעל ע״י","מקור","נמצאו","כפולים","שגיאות","זמן"].map(h => (
                           <th key={h} style={{ padding:"10px 14px",textAlign:"right",fontWeight:700,color:"var(--text-2)",fontSize:12,whiteSpace:"nowrap" }}>{h}</th>
                         ))}
                       </tr>
@@ -1556,6 +1556,11 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                                   {log.triggered_by==='manual' ? '👤 ידני' : '🤖 אוטומטי'}
                                 </span>
                               </td>
+                              <td style={{ padding:"10px 14px",color:"var(--text)",fontSize:12 }}>
+                                {log.source_name
+                                  ? <span style={{ padding:"2px 8px",borderRadius:6,background:"var(--surface-2)",border:"1px solid var(--border)",fontWeight:600 }}>🌐 {log.source_name}</span>
+                                  : <span style={{ color:"var(--text-3)" }}>הכל</span>}
+                              </td>
                               <td style={{ padding:"10px 14px",fontWeight:700,color:"var(--success)" }}>{log.total_found}</td>
                               <td style={{ padding:"10px 14px",color:"var(--text-2)" }}>{log.total_skipped}</td>
                               <td style={{ padding:"10px 14px" }}>
@@ -1569,7 +1574,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                             </tr>
                             {errs.length > 0 && (
                               <tr style={{ borderBottom:"1px solid var(--border)" }}>
-                                <td colSpan={6} style={{ padding:"0 14px 12px 14px" }}>
+                                <td colSpan={7} style={{ padding:"0 14px 12px 14px" }}>
                                   <div style={{ background:"#FFF5F5",border:"1px solid #FFCCCC",borderRadius:10,padding:"10px 14px" }}>
                                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6 }}>
                                       <div style={{ fontSize:11,fontWeight:800,color:"var(--danger)" }}>שגיאות:</div>

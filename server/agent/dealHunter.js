@@ -223,9 +223,10 @@ async function runHunter(db, triggeredBy = 'auto', sourceId = null) {
   const duration = Math.round((Date.now() - startTime) / 1000);
   console.log(`🤖 Done — ${found} new, ${skipped} skipped, ${errors.length} errors (${duration}s)`);
   try {
+    const sourceName = sourceId && sources.length === 1 ? sources[0].name : null;
     await db.execute(
-      'INSERT INTO hunter_logs (triggered_by, total_found, total_skipped, errors, duration_seconds) VALUES (?, ?, ?, ?, ?)',
-      [triggeredBy, found, skipped, errors.length ? JSON.stringify(errors) : null, duration]
+      'INSERT INTO hunter_logs (triggered_by, source_name, total_found, total_skipped, errors, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)',
+      [triggeredBy, sourceName, found, skipped, errors.length ? JSON.stringify(errors) : null, duration]
     );
   } catch (logErr) { console.warn('Failed to write hunter log:', logErr.message); }
   return { found, skipped, errors, duration };

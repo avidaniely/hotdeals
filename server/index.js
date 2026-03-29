@@ -222,12 +222,15 @@ const db = mysql.createPool({
         id               INT AUTO_INCREMENT PRIMARY KEY,
         run_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
         triggered_by     VARCHAR(20)  NOT NULL DEFAULT 'manual',
+        source_name      VARCHAR(100) DEFAULT NULL,
         total_found      INT          NOT NULL DEFAULT 0,
         total_skipped    INT          NOT NULL DEFAULT 0,
         errors           TEXT,
         duration_seconds INT          NOT NULL DEFAULT 0
       )
     `);
+    await db.execute('ALTER TABLE hunter_logs ADD COLUMN source_name VARCHAR(100) DEFAULT NULL')
+      .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
   } catch (e) {
     console.error('hunter_logs migration error:', e.message);
   }
