@@ -617,15 +617,21 @@ app.post('/api/admin/sources', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/sources/:id
 app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
-  const { is_active, prompt_id, use_proxy } = req.body;
-  if (is_active !== undefined) {
+  const { is_active, prompt_id, use_proxy, name, url, store, category_name } = req.body;
+  if (is_active !== undefined)
     await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
-  }
-  if (prompt_id !== undefined) {
+  if (prompt_id !== undefined)
     await db.execute('UPDATE hunter_sources SET prompt_id = ? WHERE id = ?', [prompt_id || null, req.params.id]);
-  }
-  if (use_proxy !== undefined) {
+  if (use_proxy !== undefined)
     await db.execute('UPDATE hunter_sources SET use_proxy = ? WHERE id = ?', [use_proxy ? 1 : 0, req.params.id]);
+  if (name !== undefined || url !== undefined || store !== undefined || category_name !== undefined) {
+    const fields = [], vals = [];
+    if (name          !== undefined) { fields.push('name=?');          vals.push(name); }
+    if (url           !== undefined) { fields.push('url=?');           vals.push(url); }
+    if (store         !== undefined) { fields.push('store=?');         vals.push(store); }
+    if (category_name !== undefined) { fields.push('category_name=?'); vals.push(category_name); }
+    vals.push(req.params.id);
+    await db.execute(`UPDATE hunter_sources SET ${fields.join(',')} WHERE id=?`, vals);
   }
   res.json({ success: true });
 });

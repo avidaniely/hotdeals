@@ -935,6 +935,8 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
   const [srcLoaded,    setSrcLoaded]    = useState(false);
   const [newSrc,       setNewSrc]       = useState({ name:'', url:'', store:'', category_name:'אלקטרוניקה' });
   const [addingSrc,    setAddingSrc]    = useState(false);
+  const [editingSrc,   setEditingSrc]   = useState(null); // id of source being edited
+  const [editSrcData,  setEditSrcData]  = useState({});
   // AI config state
   const [aiConfig,     setAiConfig]     = useState(null);
   const [aiSaving,     setAiSaving]     = useState(false);
@@ -994,6 +996,11 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
   const toggleProxy = async (id, cur) => {
     await hunterAPI.toggleProxy(id, cur ? 0 : 1);
     setSources(s => s.map(x => x.id === id ? { ...x, use_proxy: cur ? 0 : 1 } : x));
+  };
+  const saveEditSrc = async (id) => {
+    await hunterAPI.updateSource(id, editSrcData);
+    setSources(s => s.map(x => x.id === id ? { ...x, ...editSrcData } : x));
+    setEditingSrc(null);
   };
   const deleteSource = async (id) => {
     await hunterAPI.deleteSource(id);
@@ -1227,46 +1234,72 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                 </div>
               )}
               {sources.map(src => (
-                <div key={src.id} style={{ display:"flex",gap:14,alignItems:"center",padding:"14px 0",borderBottom:"1px solid var(--border)" }}>
-                  <div style={{ width:40,height:40,borderRadius:10,background:"var(--surface-3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>🌐</div>
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ fontWeight:700,fontSize:14,color:"var(--text)" }}>{src.name}
-                      <span style={{ fontWeight:400,color:"var(--text-2)",fontSize:12,marginRight:8 }}>{src.store} · {src.category_name}</span>
+                <div key={src.id} style={{ borderBottom:"1px solid var(--border)" }}>
+                  <div style={{ display:"flex",gap:14,alignItems:"center",padding:"14px 0" }}>
+                    <div style={{ width:40,height:40,borderRadius:10,background:"var(--surface-3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>🌐</div>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ fontWeight:700,fontSize:14,color:"var(--text)" }}>{src.name}
+                        <span style={{ fontWeight:400,color:"var(--text-2)",fontSize:12,marginRight:8 }}>{src.store} · {src.category_name}</span>
+                      </div>
+                      <div style={{ fontSize:11,color:"var(--text-3)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{src.url}</div>
                     </div>
-                    <div style={{ fontSize:11,color:"var(--text-3)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{src.url}</div>
+                    <div style={{ display:"flex",gap:8,flexShrink:0,alignItems:"center",flexWrap:"wrap" }}>
+                      <select
+                        value={src.prompt_id || ''}
+                        onChange={async e => {
+                          const pid = e.target.value ? +e.target.value : null;
+                          await hunterAPI.assignPrompt(src.id, pid);
+                          setSources(s => s.map(x => x.id === src.id ? { ...x, prompt_id: pid, prompt_name: prompts.find(p=>p.id===pid)?.name || null } : x));
+                        }}
+                        style={{ padding:"5px 10px",fontSize:12,borderRadius:8,border:"1.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer" }}>
+                        <option value="">🌐 גלובלי</option>
+                        {prompts.map(p => <option key={p.id} value={p.id}>📝 {p.name}</option>)}
+                      </select>
+                      <button onClick={() => toggleSource(src.id, src.is_active)}
+                        style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                          background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
+                        {src.is_active ? "● פעיל" : "○ מושהה"}
+                      </button>
+                      <button onClick={() => toggleProxy(src.id, src.use_proxy)}
+                        title={src.use_proxy ? "VPN פרוקסי פעיל — לחץ לכיבוי" : "לחץ להפעלת VPN פרוקסי"}
+                        style={{ padding:"5px 12px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                          background:src.use_proxy?"#e8f0ff":"var(--surface-3)",color:src.use_proxy?"#002A8A":"var(--text-3)" }}>
+                        {src.use_proxy ? "🔒 VPN" : "🌍 ישיר"}
+                      </button>
+                      <button
+                        onClick={() => runSourceNow(src.id)}
+                        disabled={huntingSource === src.id || hunting}
+                        style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                          background:"linear-gradient(135deg,#002A8A,#0047CC)",color:"#fff",opacity:(huntingSource===src.id||hunting)?0.6:1 }}>
+                        {huntingSource === src.id ? "🔍..." : "▶ הרץ"}
+                      </button>
+                      <button className="btn btn-ghost" style={{ padding:"5px 9px",fontSize:12 }}
+                        onClick={() => { setEditingSrc(editingSrc===src.id?null:src.id); setEditSrcData({ name:src.name, url:src.url, store:src.store, category_name:src.category_name }); }}>
+                        ✏️
+                      </button>
+                      <button className="btn btn-danger" style={{ padding:"5px 9px",fontSize:12 }} onClick={() => deleteSource(src.id)}>🗑️</button>
+                    </div>
                   </div>
-                  <div style={{ display:"flex",gap:8,flexShrink:0,alignItems:"center",flexWrap:"wrap" }}>
-                    <select
-                      value={src.prompt_id || ''}
-                      onChange={async e => {
-                        const pid = e.target.value ? +e.target.value : null;
-                        await hunterAPI.assignPrompt(src.id, pid);
-                        setSources(s => s.map(x => x.id === src.id ? { ...x, prompt_id: pid, prompt_name: prompts.find(p=>p.id===pid)?.name || null } : x));
-                      }}
-                      style={{ padding:"5px 10px",fontSize:12,borderRadius:8,border:"1.5px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer" }}>
-                      <option value="">🌐 גלובלי</option>
-                      {prompts.map(p => <option key={p.id} value={p.id}>📝 {p.name}</option>)}
-                    </select>
-                    <button onClick={() => toggleSource(src.id, src.is_active)}
-                      style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
-                        background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
-                      {src.is_active ? "● פעיל" : "○ מושהה"}
-                    </button>
-                    <button onClick={() => toggleProxy(src.id, src.use_proxy)}
-                      title={src.use_proxy ? "VPN פרוקסי פעיל — לחץ לכיבוי" : "לחץ להפעלת VPN פרוקסי"}
-                      style={{ padding:"5px 12px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
-                        background:src.use_proxy?"#e8f0ff":"var(--surface-3)",color:src.use_proxy?"#002A8A":"var(--text-3)" }}>
-                      {src.use_proxy ? "🔒 VPN" : "🌍 ישיר"}
-                    </button>
-                    <button
-                      onClick={() => runSourceNow(src.id)}
-                      disabled={huntingSource === src.id || hunting}
-                      style={{ padding:"5px 14px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
-                        background:"linear-gradient(135deg,#002A8A,#0047CC)",color:"#fff",opacity:(huntingSource===src.id||hunting)?0.6:1 }}>
-                      {huntingSource === src.id ? "🔍..." : "▶ הרץ"}
-                    </button>
-                    <button className="btn btn-danger" style={{ padding:"5px 9px",fontSize:12 }} onClick={() => deleteSource(src.id)}>🗑️</button>
-                  </div>
+                  {editingSrc === src.id && (
+                    <div style={{ background:"var(--surface-2)",borderRadius:12,padding:16,marginBottom:14,border:"1px solid var(--border)" }}>
+                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10 }}>
+                        <div><label style={fieldLabel}>שם מקור</label><input value={editSrcData.name||''} onChange={e=>setEditSrcData(d=>({...d,name:e.target.value}))} style={inputStyle} /></div>
+                        <div><label style={fieldLabel}>שם חנות</label><input value={editSrcData.store||''} onChange={e=>setEditSrcData(d=>({...d,store:e.target.value}))} style={inputStyle} /></div>
+                      </div>
+                      <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:12 }}>
+                        <div><label style={fieldLabel}>URL</label><input value={editSrcData.url||''} onChange={e=>setEditSrcData(d=>({...d,url:e.target.value}))} style={{...inputStyle,direction:"ltr"}} /></div>
+                        <div><label style={fieldLabel}>קטגוריה</label>
+                          <select value={editSrcData.category_name||''} onChange={e=>setEditSrcData(d=>({...d,category_name:e.target.value}))} style={inputStyle}>
+                            {categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex",gap:8 }}>
+                        <button className="btn btn-primary" style={{ padding:"7px 20px",fontSize:13 }} onClick={() => saveEditSrc(src.id)}>💾 שמור</button>
+                        <button className="btn btn-ghost" style={{ padding:"7px 14px",fontSize:13 }} onClick={() => setEditingSrc(null)}>ביטול</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
