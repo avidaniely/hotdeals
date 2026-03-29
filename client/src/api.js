@@ -105,4 +105,5 @@ export const hunterAPI = {
   updatePrompt: (id, body)            => api(`/admin/prompts/${id}`, { method: 'PATCH', body }),
   deletePrompt: (id)                  => api(`/admin/prompts/${id}`, { method: 'DELETE' }),
   assignPrompt: (sourceId, promptId)  => api(`/admin/sources/${sourceId}`, { method: 'PATCH', body: { prompt_id: promptId } }),
+  toggleProxy:  (id, use_proxy)       => api(`/admin/sources/${id}`, { method: 'PATCH', body: { use_proxy } }),
 };

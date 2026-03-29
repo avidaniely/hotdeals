@@ -70,6 +70,10 @@ const db = mysql.createPool({
     await db.execute('ALTER TABLE hunter_sources ADD COLUMN prompt_id INT DEFAULT NULL')
       .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
 
+    // Add use_proxy column to hunter_sources (existing installs)
+    await db.execute('ALTER TABLE hunter_sources ADD COLUMN use_proxy TINYINT(1) NOT NULL DEFAULT 0')
+      .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
+
     // hunter_prompts table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS hunter_prompts (
@@ -610,12 +614,15 @@ app.post('/api/admin/sources', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/sources/:id
 app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
-  const { is_active, prompt_id } = req.body;
+  const { is_active, prompt_id, use_proxy } = req.body;
   if (is_active !== undefined) {
     await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
   }
   if (prompt_id !== undefined) {
     await db.execute('UPDATE hunter_sources SET prompt_id = ? WHERE id = ?', [prompt_id || null, req.params.id]);
+  }
+  if (use_proxy !== undefined) {
+    await db.execute('UPDATE hunter_sources SET use_proxy = ? WHERE id = ?', [use_proxy ? 1 : 0, req.params.id]);
   }
   res.json({ success: true });
 });
@@ -682,7 +689,7 @@ app.get('/api/admin/hunter-config', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/hunter-config  — upsert one or more keys
 app.patch('/api/admin/hunter-config', adminAuth, async (req, res) => {
-  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','min_votes','min_comments'];
+  const allowed = ['ai_provider','ai_api_key','ai_model','ai_max_tokens','schedule','enabled','min_votes','min_comments','vpn_proxy'];
   const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
   if (!entries.length) return res.status(400).json({ error: 'no valid keys' });
   for (const [key, value] of entries) {

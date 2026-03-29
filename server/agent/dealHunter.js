@@ -7,12 +7,20 @@ const cron      = require('node-cron');
 const axios     = require('axios');
 const cheerio   = require('cheerio');
 const Anthropic = require('@anthropic-ai/sdk');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const { SocksProxyAgent } = require('socks-proxy-agent');
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Accept-Language': 'he-IL,he;q=0.9,en;q=0.8',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 };
+
+// ── Proxy rotation ────────────────────────────────────────────
+function loadProxies() {
+  const raw = process.env.PROXIES || '';
+  return raw.split(',').map(p => p.trim()).filter(Boolean);
+}
 
 // ── Load config from DB ───────────────────────────────────────
 async function loadConfig(db) {
@@ -21,9 +29,53 @@ async function loadConfig(db) {
 }
 
 // ── Scrape ───────────────────────────────────────────────────
-async function fetchPage(url) {
-  const { data } = await axios.get(url, { headers: HEADERS, timeout: 15000 });
-  return data;
+function buildAgent(proxyUrl) {
+  if (!proxyUrl) return null;
+  if (proxyUrl.startsWith('socks4://') || proxyUrl.startsWith('socks5://')) {
+    return new SocksProxyAgent(proxyUrl);
+  }
+  return new HttpsProxyAgent(proxyUrl);
+}
+
+async function fetchPage(url, proxies = [], vpnProxy = null) {
+  // If a dedicated VPN proxy is requested, use it (single attempt, no rotation)
+  if (vpnProxy) {
+    const agent = buildAgent(vpnProxy);
+    const options = { headers: HEADERS, timeout: 20000 };
+    if (agent) { options.httpAgent = agent; options.httpsAgent = agent; }
+    const { data } = await axios.get(url, options);
+    return data;
+  }
+
+  const maxAttempts = proxies.length > 0 ? Math.min(proxies.length, 3) : 1;
+  const tried = new Set();
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let proxy = null;
+    if (proxies.length > 0) {
+      const available = proxies.filter(p => !tried.has(p));
+      const pool = available.length > 0 ? available : proxies;
+      proxy = pool[Math.floor(Math.random() * pool.length)];
+      tried.add(proxy);
+    }
+
+    try {
+      const options = { headers: HEADERS, timeout: 15000 };
+      if (proxy) {
+        const agent = buildAgent(proxy);
+        options.httpAgent  = agent;
+        options.httpsAgent = agent;
+      }
+      const { data } = await axios.get(url, options);
+      return data;
+    } catch (e) {
+      if (attempt < maxAttempts - 1) {
+        console.warn(`  ⚠️  ${proxy ? `Proxy ${proxy} failed` : 'Request failed'}, retrying...`);
+        continue;
+      }
+      throw e;
+    }
+  }
 }
 
 function extractText(html) {
@@ -123,6 +175,9 @@ async function runHunter(db, triggeredBy = 'auto', sourceId = null) {
     return { found: 0, skipped: 0, errors: ['Deal Hunter is disabled'], duration: 0 };
   }
 
+  const proxies = loadProxies();
+  if (proxies.length) console.log(`🔀 Proxy rotation enabled — ${proxies.length} proxies loaded`);
+
   const [[admin]] = await db.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (!admin) return { found: 0, errors: ['No admin user found'], duration: 0 };
 
@@ -140,11 +195,15 @@ async function runHunter(db, triggeredBy = 'auto', sourceId = null) {
   let found = 0, skipped = 0;
   const errors = [];
 
+  const vpnProxy = config.vpn_proxy || null;
+  if (vpnProxy) console.log(`🔒 VPN proxy configured — will use for sources with proxy enabled`);
+
   for (const source of sources) {
     source.categoryName = source.category_name;
+    const useVpn = source.use_proxy && vpnProxy;
     try {
-      console.log(`  🔍 Scraping ${source.name}...`);
-      const html  = await fetchPage(source.url);
+      console.log(`  🔍 Scraping ${source.name}${useVpn ? ' [VPN]' : ''}...`);
+      const html  = await fetchPage(source.url, proxies, useVpn ? vpnProxy : null);
       const text  = extractText(html);
       const deals = await extractDealsWithAI(text, source, config);
       const [[cat]] = await db.execute('SELECT id FROM categories WHERE name = ?', [source.categoryName]);

@@ -991,6 +991,10 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
     await hunterAPI.toggleSource(id, cur ? 0 : 1);
     setSources(s => s.map(x => x.id === id ? { ...x, is_active: cur ? 0 : 1 } : x));
   };
+  const toggleProxy = async (id, cur) => {
+    await hunterAPI.toggleProxy(id, cur ? 0 : 1);
+    setSources(s => s.map(x => x.id === id ? { ...x, use_proxy: cur ? 0 : 1 } : x));
+  };
   const deleteSource = async (id) => {
     await hunterAPI.deleteSource(id);
     setSources(s => s.filter(x => x.id !== id));
@@ -1248,6 +1252,12 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                         background:src.is_active?"#e8f5e9":"#fce4e4",color:src.is_active?"#2e7d32":"#c62828" }}>
                       {src.is_active ? "● פעיל" : "○ מושהה"}
                     </button>
+                    <button onClick={() => toggleProxy(src.id, src.use_proxy)}
+                      title={src.use_proxy ? "VPN פרוקסי פעיל — לחץ לכיבוי" : "לחץ להפעלת VPN פרוקסי"}
+                      style={{ padding:"5px 12px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                        background:src.use_proxy?"#e8f0ff":"var(--surface-3)",color:src.use_proxy?"#002A8A":"var(--text-3)" }}>
+                      {src.use_proxy ? "🔒 VPN" : "🌍 ישיר"}
+                    </button>
                     <button
                       onClick={() => runSourceNow(src.id)}
                       disabled={huntingSource === src.id || hunting}
@@ -1324,6 +1334,27 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                             color:aiConfig.enabled==='1'?"#2e7d32":"#c62828" }}>
                           {aiConfig.enabled==='1' ? "● מופעל" : "○ מושהה"}
                         </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VPN Proxy */}
+                  <div style={{ background:"var(--surface-2)",borderRadius:14,padding:20,border:"1px solid var(--border)" }}>
+                    <div style={{ fontWeight:800,fontSize:14,color:"var(--text)",marginBottom:6 }}>🔒 VPN פרוקסי (לאתרים עם הגבלה גיאוגרפית)</div>
+                    <div style={{ fontSize:12,color:"var(--text-2)",marginBottom:14 }}>
+                      מקורות עם 🔒 VPN יסרקו דרך פרוקסי זה. תמיכה ב-SOCKS5 ו-HTTPS.
+                    </div>
+                    <div>
+                      <label style={fieldLabel}>כתובת פרוקסי</label>
+                      <input
+                        value={aiConfig.vpn_proxy || ''}
+                        onChange={e => setAiConfig(c => ({ ...c, vpn_proxy: e.target.value }))}
+                        placeholder="socks5://user:pass@192.168.50.116:1080"
+                        style={inputStyle}
+                        dir="ltr"
+                      />
+                      <div style={{ fontSize:11,color:"var(--text-3)",marginTop:4 }}>
+                        פורמטים: <code>socks5://user:pass@host:port</code> · <code>http://user:pass@host:port</code>
                       </div>
                     </div>
                   </div>
