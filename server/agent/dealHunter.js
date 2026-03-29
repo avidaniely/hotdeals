@@ -89,7 +89,7 @@ async function fetchPage(url, proxies = [], vpnProxy = null) {
 function extractText(html) {
   const $ = cheerio.load(html);
   $('script, style, nav, footer, header, noscript, iframe').remove();
-  return $('body').text().replace(/\s+/g, ' ').trim().slice(0, 7000);
+  return $('body').text().replace(/\s+/g, ' ').trim().slice(0, 15000);
 }
 
 // ── Search via DuckDuckGo ─────────────────────────────────────
@@ -113,18 +113,17 @@ async function extractDealsWithAI(pageText, source, config) {
   if (!apiKey) throw new Error('No AI API key configured');
 
   const DEFAULT_PROMPT =
-    'You are a deal extraction AI for hotILdeals.\n' +
-    'Analyze the text from {store} and find the 3-5 best deals.\n' +
-    'For each deal return: title, deal_price (number, ₪), original_price (number or null), description (short, Hebrew preferred), url.\n' +
-    'Rules: only clear prices in ₪. Prefer deals with both original and sale price. Extract real URLs from the text.\n' +
-    'Return JSON only: [{...}]';
+    'אתה AI לחילוץ דילים עבור אתר hotILdeals.\n' +
+    'נתח את הטקסט מאתר {store} ומצא את 3-5 העסקאות הטובות ביותר.\n' +
+    'עבור כל עסקה החזר: title, deal_price (מספר, ₪), original_price (מספר או null), description (קצר, עברית), url (חלץ מהטקסט).\n' +
+    'כלול רק מחירים ברורים בשקלים. החזר JSON בלבד: [{...}]';
 
   const DEFAULT_SEARCH_PROMPT =
-    'You are a deal extraction AI for hotILdeals.\n' +
-    'Below are search results for deals from {store}. Extract the 3-5 best deals you can identify.\n' +
-    'For each deal return: title, deal_price (number, ₪), original_price (number or null), description (short, Hebrew preferred), url.\n' +
-    'Rules: only include deals with a clear price. Use the URL from the search result.\n' +
-    'Return JSON only: [{...}]';
+    'אתה AI לחילוץ דילים עבור אתר hotILdeals.\n' +
+    'להלן תוצאות חיפוש לדילים מ-{store}. כל תוצאה כוללת כותרת, תיאור וקישור.\n' +
+    'חלץ את 3-5 הדילים הטובים ביותר שאתה מוצא.\n' +
+    'עבור כל דיל החזר: title, deal_price (מספר, ₪), original_price (מספר או null), description (קצר, עברית), url (מהקישור בתוצאה).\n' +
+    'כלול רק דילים עם מחיר ברור. החזר JSON בלבד: [{...}]';
 
   const basePrompt = source.custom_prompt || (source.use_search ? DEFAULT_SEARCH_PROMPT : DEFAULT_PROMPT);
   const prompt = basePrompt
