@@ -114,16 +114,17 @@ async function extractDealsWithAI(pageText, source, config) {
 
   const DEFAULT_PROMPT =
     'אתה AI לחילוץ דילים עבור אתר hotILdeals.\n' +
-    'נתח את הטקסט מאתר {store} ומצא את 3-5 העסקאות הטובות ביותר.\n' +
-    'עבור כל עסקה החזר: title, deal_price (מספר, ₪), original_price (מספר או null), description (קצר, עברית), url (חלץ מהטקסט).\n' +
-    'כלול רק מחירים ברורים בשקלים. החזר JSON בלבד: [{...}]';
+    'נתח את הטקסט מאתר {store} ומצא עד 5 מוצרים במחיר מבצע.\n' +
+    'עבור כל מוצר החזר: title (שם), deal_price (מספר ₪, חובה), original_price (מספר ₪ או null), description (קצר, עברית), url (מהטקסט או null).\n' +
+    'כלול מוצר גם בלי מחיר מקורי. דלג רק אם אין מחיר כלל.\n' +
+    'החזר JSON array בלבד: [{"title":"...","deal_price":0,"original_price":null,"description":"...","url":null}]';
 
   const DEFAULT_SEARCH_PROMPT =
     'אתה AI לחילוץ דילים עבור אתר hotILdeals.\n' +
-    'להלן תוצאות חיפוש לדילים מ-{store}. כל תוצאה כוללת כותרת, תיאור וקישור.\n' +
-    'חלץ את 3-5 הדילים הטובים ביותר שאתה מוצא.\n' +
-    'עבור כל דיל החזר: title, deal_price (מספר, ₪), original_price (מספר או null), description (קצר, עברית), url (מהקישור בתוצאה).\n' +
-    'כלול רק דילים עם מחיר ברור. החזר JSON בלבד: [{...}]';
+    'להלן תוצאות חיפוש מ-DuckDuckGo עבור {store}. כל תוצאה: כותרת · תיאור · קישור.\n' +
+    'מצא עד 5 תוצאות שנראות כמבצעים/דילים. אם המחיר לא מפורש — הכנס deal_price: 0.\n' +
+    'עבור כל תוצאה: title, deal_price (₪ או 0), original_price (₪ או null), description (עברית), url (הקישור — חובה).\n' +
+    'החזר JSON array בלבד: [{"title":"...","deal_price":0,"original_price":null,"description":"...","url":"https://..."}]';
 
   const basePrompt = source.custom_prompt || (source.use_search ? DEFAULT_SEARCH_PROMPT : DEFAULT_PROMPT);
   const prompt = basePrompt
