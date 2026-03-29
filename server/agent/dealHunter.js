@@ -89,7 +89,14 @@ async function extractDealsWithAI(pageText, source, config) {
   const apiKey = config.ai_api_key || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('No AI API key configured');
 
-  const basePrompt = source.custom_prompt || '';
+  const DEFAULT_PROMPT =
+    'You are a deal extraction AI for hotILdeals.\n' +
+    'Analyze the text from {store} and find the 3-5 best deals.\n' +
+    'For each deal return: title, deal_price (number, ₪), original_price (number or null), description (short, Hebrew preferred), url.\n' +
+    'Rules: only clear prices in ₪. Prefer deals with both original and sale price.\n' +
+    'Return JSON only: [{...}]';
+
+  const basePrompt = source.custom_prompt || DEFAULT_PROMPT;
   const prompt = basePrompt
     .replace('{store}', source.store)
     .replace('{min_votes}', config.min_votes || '5')
