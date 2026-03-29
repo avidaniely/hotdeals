@@ -91,38 +91,112 @@ const db = mysql.createPool({
       )
     `);
 
+    // Prompt templates — defined once, used for both seed and migration updates
+    const PROMPT_TEMPLATES = [
+      {
+        name: 'מרצנט - כללי',
+        description: 'לאתרי חנויות כמו KSP, Bug, Ivory, Amazon',
+        prompt_text:
+          'אתה AI לחילוץ דילים עבור אתר hotILdeals.\n' +
+          'קיבלת טקסט מאתר {store} — יכול להיות טקסט גולמי מהדף או תוצאות חיפוש (כל תוצאה כוללת כותרת, תיאור וURL).\n' +
+          'מצא את 3-5 העסקאות הטובות ביותר.\n\n' +
+          'עבור כל עסקה החזר:\n' +
+          '- title: שם המוצר (עברית מועדפת)\n' +
+          '- deal_price: מחיר מבצע (מספר, ₪, חובה)\n' +
+          '- original_price: מחיר מקורי לפני הנחה (מספר, ₪, או null)\n' +
+          '- description: תיאור קצר בעברית — מה המוצר ולמה זו עסקה טובה\n' +
+          '- url: קישור ישיר למוצר — חלץ מהטקסט, אל תמציא\n\n' +
+          'חוקים: רק מחירים ברורים בשקלים. עדיף עסקאות עם מחיר מקורי ומחיר מבצע. אם אין מחיר ברור — דלג.\n' +
+          'החזר JSON בלבד, ללא הסברים: [{...}]'
+      },
+      {
+        name: 'אגרגטור קהילתי',
+        description: 'לאתרי דילים כמו bee.deals, FXP — עם ציון פופולריות',
+        prompt_text:
+          'אתה AI שמחלץ דילים מאתר קהילתי בשם {store}.\n' +
+          'קיבלת טקסט מהדף או תוצאות חיפוש. כלול רק דילים עם לפחות {min_votes} הצבעות ו-{min_comments} תגובות.\n\n' +
+          'עבור כל דיל חלץ:\n' +
+          '- title: שם המוצר או שם הדיל\n' +
+          '- deal_price: מחיר (מספר, ₪ — אם USD/EUR המר: 1$ ≈ 3.7₪)\n' +
+          '- original_price: מחיר מקורי (מספר או null)\n' +
+          '- description: תיאור קצר בעברית כולל מה החנות ולמה הדיל שווה\n' +
+          '- url: קישור ישיר לדיל — חלץ מהטקסט\n' +
+          '- votes: מספר הצבעות (מספר, 0 אם לא ידוע)\n' +
+          '- comments: מספר תגובות (מספר, 0 אם לא ידוע)\n' +
+          '- hours_ago: גיל בשעות (מספר, 0 אם לא ידוע)\n\n' +
+          'עדף דילים טרנדיים — הצבעות רבות ביחס לגיל הפוסט.\n' +
+          'החזר JSON בלבד: [{...}]'
+      },
+      {
+        name: 'אלקטרוניקה מתמחה',
+        description: 'לאתרי אלקטרוניקה — מתמקד בגאדג\'טים וטכנולוגיה',
+        prompt_text:
+          'אתה מומחה אלקטרוניקה שמחפש דילים טכנולוגיים מ-{store}.\n' +
+          'קיבלת טקסט גולמי מהדף או תוצאות חיפוש.\n' +
+          'חלץ רק: סמארטפונים, מחשבים ניידים, טאבלטים, אוזניות, מסכים, מקלדות, רכיבי מחשב, גאדג\'טים חכמים.\n' +
+          'התעלם לחלוטין ממוצרים שאינם טכנולוגיה.\n\n' +
+          'עבור כל מוצר:\n' +
+          '- title: שם המוצר כולל דגם (עברית מועדפת)\n' +
+          '- deal_price: מחיר מבצע (מספר, ₪, חובה)\n' +
+          '- original_price: מחיר מקורי (מספר, ₪, או null)\n' +
+          '- description: תיאור טכני קצר — מפרט עיקרי + למה זו עסקה טובה\n' +
+          '- url: קישור ישיר למוצר — חלץ מהטקסט, אל תמציא\n\n' +
+          'החזר JSON בלבד: [{...}]'
+      },
+      {
+        name: 'בינלאומי - המרת מחיר',
+        description: 'לאתרים כמו AliExpress, Banggood — המר USD/EUR ל-₪',
+        prompt_text:
+          'אתה AI לדילים בינלאומיים מ-{store}.\n' +
+          'קיבלת טקסט גולמי מהדף או תוצאות חיפוש.\n' +
+          'חלץ עסקאות ב-USD/EUR/CNY והמר ל-₪: 1 USD ≈ 3.7 ₪ · 1 EUR ≈ 4 ₪ · 1 CNY ≈ 0.51 ₪\n' +
+          'כלול רק מוצרים שנשלחים לישראל (חפש "ships to Israel" / "IL" / "ישראל").\n\n' +
+          'עבור כל עסקה:\n' +
+          '- title: שם המוצר (עברית מועדפת)\n' +
+          '- deal_price: מחיר ב-₪ לאחר המרה (מספר, חובה)\n' +
+          '- original_price: מחיר מקורי ב-₪ לאחר המרה (מספר או null)\n' +
+          '- description: תיאור קצר בעברית + ציין מחיר מקורי במטבע המקור + זמן משלוח משוער\n' +
+          '- url: קישור ישיר למוצר — חלץ מהטקסט, אל תמציא\n\n' +
+          'החזר JSON בלבד: [{...}]'
+      },
+      {
+        name: 'חיסכון מקסימלי',
+        description: 'מחפש רק הנחות של 20%+ עם מחיר מקורי ברור',
+        prompt_text:
+          'אתה ציד הנחות מ-{store}.\n' +
+          'קיבלת טקסט גולמי מהדף או תוצאות חיפוש.\n' +
+          'חלץ רק מוצרים עם הנחה של 20% ומעלה — חובה שיהיו גם מחיר מקורי וגם מחיר מבצע.\n' +
+          'חשב: pct = (1 - deal_price / original_price) × 100. כלול רק אם pct >= 20.\n\n' +
+          'עבור כל מוצר:\n' +
+          '- title: שם המוצר\n' +
+          '- deal_price: מחיר מבצע (מספר, ₪, חובה)\n' +
+          '- original_price: מחיר מקורי (מספר, ₪, חובה)\n' +
+          '- description: תיאור קצר בעברית + ציין את אחוז ההנחה במפורש\n' +
+          '- url: קישור ישיר למוצר — חלץ מהטקסט, אל תמציא\n\n' +
+          'מיין לפי אחוז הנחה — הגבוה ביותר קודם.\n' +
+          'החזר JSON בלבד: [{...}]'
+      }
+    ];
+
     // Seed default prompt templates if empty
     const [[{ pCnt }]] = await db.execute('SELECT COUNT(*) AS pCnt FROM hunter_prompts');
     if (pCnt === 0) {
-      await db.execute(`
-        INSERT INTO hunter_prompts (name, description, prompt_text) VALUES
-        (
-          'מרצ\\u2019נט - כללי',
-          'לאתרי חנויות כמו KSP, Bug, Ivory, Amazon',
-          'אתה AI לחילוץ דילים עבור אתר hotILdeals.\\nנתח את הטקסט מאתר {store} ומצא את 3-5 העסקאות הטובות ביותר.\\n\\nעבור כל עסקה החזר:\\n- title: שם המוצר (עברית מועדפת)\\n- deal_price: מחיר מבצע (מספר, ₪)\\n- original_price: מחיר מקורי (מספר או null)\\n- description: תיאור קצר בעברית\\n- url: קישור למוצר\\n\\nחוקים: רק מחירים ברורים בשקלים. עדיף עם מחיר מקורי ומבצע.\\nהחזר JSON בלבד: [{...}]'
-        ),
-        (
-          'אגרגטור קהילתי',
-          'לאתרי דילים כמו bee.deals, FXP — עם ציון פופולריות',
-          'אתה AI שמחלץ דילים מאתר קהילתי בשם {store}.\\nכלול רק דילים עם לפחות {min_votes} הצבעות ו-{min_comments} תגובות.\\n\\nעבור כל דיל חלץ:\\n- title, deal_price, original_price, description, url\\n- votes: מספר הצבעות (מספר)\\n- comments: מספר תגובות (מספר)\\n- hours_ago: גיל בשעות (מספר)\\n\\nעדף דילים עם הצבעות רבות ביחס לגיל הפוסט (טרנדי).\\nהחזר JSON בלבד: [{...}]'
-        ),
-        (
-          'אלקטרוניקה מתמחה',
-          'לאתרי אלקטרוניקה — מתמקד בגאדג''טים וטכנולוגיה',
-          'אתה מומחה אלקטרוניקה שמחפש דילים טכנולוגיים מ-{store}.\\nחלץ רק: סמארטפונים, מחשבים, אוזניות, מסכים, רכיבים, גאדג''טים.\\nהתעלם ממוצרי לא-טכנולוגיה.\\n\\nעבור כל מוצר: title, deal_price, original_price, description טכני קצר, url.\\nהחזר JSON בלבד: [{...}]'
-        ),
-        (
-          'בינלאומי - המרת מחיר',
-          'לאתרים כמו AliExpress, Banggood — המר USD/EUR ל-₪',
-          'אתה AI לדילים בינלאומיים מ-{store}.\\nחלץ עסקאות ב-USD/EUR והמר ל-₪ (שער: 1 USD ≈ 3.7 ₪, 1 EUR ≈ 4 ₪).\\nכלול רק מוצרים הנשלחים לישראל.\\n\\nשדות: title, deal_price (ב-₪ לאחר המרה), original_price (ב-₪), description, url.\\nציין בתיאור שהמחיר הומר + זמן משלוח משוער.\\nהחזר JSON בלבד: [{...}]'
-        ),
-        (
-          'חיסכון מקסימלי',
-          'מחפש רק הנחות של 20%+ עם מחיר מקורי ברור',
-          'אתה ציד הנחות מ-{store}. חלץ רק מוצרים עם הנחה של 20% ומעלה.\\nחשב: pct = (1 - deal_price/original_price) × 100. דרוש pct >= 20.\\n\\nשדות: title, deal_price, original_price, description, url.\\nמיין לפי אחוז הנחה — הגבוה ביותר קודם.\\nהחזר JSON בלבד: [{...}]'
-        )
-      `);
+      for (const p of PROMPT_TEMPLATES) {
+        await db.execute(
+          'INSERT INTO hunter_prompts (name, description, prompt_text) VALUES (?, ?, ?)',
+          [p.name, p.description, p.prompt_text]
+        );
+      }
       console.log('✅ Seeded default prompt templates');
+    } else {
+      // Update existing prompts by name
+      for (const p of PROMPT_TEMPLATES) {
+        await db.execute(
+          'UPDATE hunter_prompts SET description = ?, prompt_text = ? WHERE name = ?',
+          [p.description, p.prompt_text, p.name]
+        );
+      }
+      console.log('✅ Updated existing prompt templates');
     }
 
     // Ensure aggregator sources exist (for existing installs)
