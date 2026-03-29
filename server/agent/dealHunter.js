@@ -41,7 +41,7 @@ async function fetchPage(url, proxies = [], vpnProxy = null) {
   // If a dedicated VPN proxy is requested, use it (single attempt, no rotation)
   if (vpnProxy) {
     const agent = buildAgent(vpnProxy);
-    const options = { headers: HEADERS, timeout: 20000 };
+    const options = { headers: HEADERS, timeout: 60000 };
     if (agent) { options.httpAgent = agent; options.httpsAgent = agent; }
     const { data } = await axios.get(url, options);
     return data;
