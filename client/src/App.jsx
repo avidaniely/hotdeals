@@ -489,7 +489,7 @@ export default function App() {
               </div>
             ) : (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 18 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {deals.map((deal, index) => (
                     <div key={deal.id} style={{ animationDelay:`${index * 70}ms` }}>
                       <DealCard deal={deal} currentUser={user}
