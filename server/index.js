@@ -469,7 +469,7 @@ app.get('/api/deals', async (req, res) => {
     }
 
     const orderBy = sort === 'hot'
-      ? 'ORDER BY (hot - cold) DESC, d.created_at DESC'
+      ? "ORDER BY (COALESCE(SUM(v.vote_type = 'hot'), 0) - COALESCE(SUM(v.vote_type = 'cold'), 0)) DESC, d.created_at DESC"
       : sort === 'quality'
       ? 'ORDER BY ISNULL(d.quality_score), d.quality_score DESC, d.created_at DESC'
       : 'ORDER BY d.created_at DESC';
