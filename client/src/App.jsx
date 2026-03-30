@@ -366,9 +366,13 @@ export default function App() {
           onBanUser={adminBanUser}
         />
       ) : dealMatch ? (
-        <DealPage deal={selectedDeal} currentUser={user} onVote={vote} onComment={addComment}
-          onBack={() => navigate('/')} isAdmin={user?.role === "admin"}
-          onAdminUpdate={adminUpdateDeal} onAdminDelete={adminDeleteDeal} />
+        selectedDeal ? (
+          <DealPage deal={selectedDeal} currentUser={user} onVote={vote} onComment={addComment}
+            onBack={() => navigate('/')} isAdmin={user?.role === "admin"}
+            onAdminUpdate={adminUpdateDeal} onAdminDelete={adminDeleteDeal} />
+        ) : (
+          <div style={{ textAlign:"center", padding:"80px 24px", color:"var(--text-2)", fontSize:16 }}>טוען דיל...</div>
+        )
       ) : (
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
