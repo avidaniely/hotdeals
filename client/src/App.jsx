@@ -257,86 +257,90 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <header style={{ background:"linear-gradient(180deg,#fff 0%,#f8faff 100%)", color:"var(--text)", position:"sticky", top:0, zIndex:100, borderBottom:"1px solid rgba(0,56,168,.08)", boxShadow:"0 1px 0 rgba(0,56,168,.06), 0 8px 32px rgba(0,28,84,.08)" }}>
+      <header style={{ background:"#fff", color:"var(--text)", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 8px rgba(0,0,0,.07)" }}>
+
+        {/* Row 1: Logo + Search + User */}
         <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 24px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:20, height:72, justifyContent:"space-between" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16, height:64 }}>
 
             {/* Logo */}
-            <div style={{ display:"flex",alignItems:"center",flexShrink:0 }}>
-              <img src="/logo.png" alt="hotILdeals" style={{ height:54,width:"auto",filter:"drop-shadow(0 2px 8px rgba(0,28,84,.18))" }} />
+            <div style={{ flexShrink:0 }}>
+              <img src="/logo.png" alt="hotILdeals" style={{ height:46, width:"auto" }} />
             </div>
 
             {/* Search */}
-            <div style={{ flex:1, maxWidth:580 }} className="desktop-only">
-              <div style={{ display:"flex",alignItems:"center",background:"var(--surface-2)",border:"1.5px solid var(--border)",borderRadius:32,padding:"0 18px",transition:"var(--tr)",minHeight:46 }}
-                onFocusCapture={e => { e.currentTarget.style.borderColor="var(--blue)"; e.currentTarget.style.background="#fff"; e.currentTarget.style.boxShadow="0 0 0 4px rgba(0,56,168,.08)"; }}
-                onBlurCapture={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.background="var(--surface-2)"; e.currentTarget.style.boxShadow="none"; }}>
-                <span style={{ color:"var(--text-3)",fontSize:15,flexShrink:0 }}>🔍</span>
+            <div style={{ flex:1, maxWidth:600 }} className="desktop-only">
+              <div style={{ display:"flex", alignItems:"center", background:"#f3f5fb", border:"2px solid #e4e9f5", borderRadius:8, padding:"0 14px", minHeight:42, transition:"var(--tr)" }}
+                onFocusCapture={e => { e.currentTarget.style.borderColor="var(--blue)"; e.currentTarget.style.background="#fff"; e.currentTarget.style.boxShadow="0 0 0 3px rgba(0,56,168,.1)"; }}
+                onBlurCapture={e => { e.currentTarget.style.borderColor="#e4e9f5"; e.currentTarget.style.background="#f3f5fb"; e.currentTarget.style.boxShadow="none"; }}>
+                <span style={{ color:"#aab", fontSize:15, flexShrink:0 }}>🔍</span>
                 <input
                   placeholder="חפש דילים, מוצרים, חנויות..."
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
-                  style={{ background:"transparent",border:"none",color:"var(--text)",fontSize:14,fontWeight:500,flex:1,outline:"none",padding:"12px 10px",direction:"rtl",width:"100%" }}
+                  style={{ background:"transparent", border:"none", color:"var(--text)", fontSize:14, fontWeight:500, flex:1, outline:"none", padding:"10px 10px", direction:"rtl", width:"100%" }}
                 />
               </div>
             </div>
 
             {/* User area */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0, marginRight:"auto" }}>
               {user ? (
                 <>
                   {user.role === "admin" && (
-                    <button className="btn btn-ghost" style={{ padding:"8px 14px", fontSize:13, borderRadius:10 }}
+                    <button className="btn btn-ghost" style={{ padding:"7px 14px", fontSize:13, borderRadius:8 }}
                       onClick={() => { setAdminOpen(true); loadAdmin(); window.scrollTo(0, 0); }}>
                       ⚙️ ניהול
-                      {adminStats?.pending > 0 && <span style={{ background:"var(--danger)",color:"#fff",borderRadius:"50%",width:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900 }}>{adminStats.pending}</span>}
+                      {adminStats?.pending > 0 && <span style={{ background:"var(--danger)", color:"#fff", borderRadius:"50%", width:18, height:18, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:900, marginRight:4 }}>{adminStats.pending}</span>}
                     </button>
                   )}
-                  <button className="btn btn-primary" onClick={() => setModal("newdeal")} style={{ padding:"8px 18px", fontSize:13 }}>
-                    ➕ שתף דיל
-                  </button>
-                  <div style={{ display:"flex",alignItems:"center",gap:8,padding:"5px 10px 5px 12px",background:"var(--surface-2)",borderRadius:12,border:"1.5px solid var(--border)" }}>
-                    <span style={{ fontSize:22 }}>{user.avatar}</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 10px", background:"var(--surface-2)", borderRadius:8, border:"1.5px solid var(--border)" }}>
+                    <span style={{ fontSize:20 }}>{user.avatar}</span>
                     <div style={{ lineHeight:1.2 }}>
-                      <div style={{ fontSize:13,fontWeight:700,color:"var(--text)" }}>{user.username}</div>
-                      {user.role === "admin" && <div style={{ fontSize:10,color:"var(--blue)",fontWeight:700 }}>מנהל</div>}
+                      <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{user.username}</div>
+                      {user.role === "admin" && <div style={{ fontSize:10, color:"var(--blue)", fontWeight:700 }}>מנהל</div>}
                     </div>
-                    <button onClick={logout} style={{ background:"var(--surface-3)",border:"none",color:"var(--text-2)",borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:700 }}>יציאה</button>
+                    <button onClick={logout} style={{ background:"none", border:"none", color:"var(--text-3)", fontSize:12, fontWeight:600, cursor:"pointer", padding:"2px 4px" }}>יציאה</button>
                   </div>
+                  <button className="btn btn-primary" onClick={() => setModal("newdeal")} style={{ padding:"8px 20px", fontSize:13, borderRadius:8, fontWeight:700 }}>
+                    + שתף דיל
+                  </button>
                 </>
               ) : (
                 <>
-                  <button className="btn btn-ghost" style={{ padding:"8px 18px", fontSize:13 }} onClick={() => setModal("login")}>כניסה</button>
-                  <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:13 }} onClick={() => setModal("register")}>הצטרף</button>
+                  <button className="btn btn-ghost" style={{ padding:"8px 16px", fontSize:13, borderRadius:8 }} onClick={() => setModal("login")}>כניסה</button>
+                  <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:13, borderRadius:8 }} onClick={() => setModal("register")}>הצטרף</button>
                 </>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Category bar */}
-          <div style={{ display:"flex",gap:6,overflowX:"auto",padding:"0 0 14px",scrollbarWidth:"none",msOverflowStyle:"none" }}>
-            {["הכל", ...categories.map(c => c.name)].map(c => (
-              <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
-                style={{
-                  border: activeCategory===c ? "1.5px solid var(--blue)" : "1.5px solid transparent",
-                  borderRadius: 999,
-                  padding: "6px 18px",
-                  fontSize: 13,
-                  fontWeight: activeCategory===c ? 700 : 500,
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  cursor: "pointer",
-                  letterSpacing: ".01em",
-                  background: activeCategory===c ? "var(--blue)" : "transparent",
-                  color: activeCategory===c ? "#fff" : "var(--text-2)",
-                  boxShadow: activeCategory===c ? "0 4px 14px rgba(0,56,168,.25)" : "none",
-                  transition: "var(--tr)",
-                }}
-                onMouseEnter={e => { if(activeCategory!==c){ e.currentTarget.style.background="var(--surface-2)"; e.currentTarget.style.color="var(--text)"; }}}
-                onMouseLeave={e => { if(activeCategory!==c){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--text-2)"; }}}>
-                {c}
-              </button>
-            ))}
+        {/* Row 2: Category nav */}
+        <div style={{ borderTop:"1px solid #eef0f8", background:"#fafbff" }}>
+          <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 24px" }}>
+            <div style={{ display:"flex", gap:0, overflowX:"auto", scrollbarWidth:"none", msOverflowStyle:"none" }}>
+              {["הכל", ...categories.map(c => c.name)].map(c => (
+                <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
+                  style={{
+                    background:"none",
+                    border:"none",
+                    borderBottom: activeCategory===c ? "3px solid var(--blue)" : "3px solid transparent",
+                    padding:"9px 16px",
+                    fontSize:13,
+                    fontWeight: activeCategory===c ? 700 : 500,
+                    whiteSpace:"nowrap",
+                    flexShrink:0,
+                    cursor:"pointer",
+                    color: activeCategory===c ? "var(--blue)" : "var(--text-2)",
+                    transition:"color .15s, border-color .15s",
+                  }}
+                  onMouseEnter={e => { if(activeCategory!==c) e.currentTarget.style.color="var(--text)"; }}
+                  onMouseLeave={e => { if(activeCategory!==c) e.currentTarget.style.color="var(--text-2)"; }}>
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </header>
@@ -396,14 +400,24 @@ export default function App() {
 
           {/* Feed */}
           <div>
-            {/* Tabs */}
-            <div style={{ display: "flex", gap: 4, background: "var(--surface)", borderRadius: 14, padding: 5, marginBottom: 22, boxShadow: "var(--sh)", border: "1px solid var(--border)", width: "fit-content" }}>
+            {/* Sort tabs */}
+            <div style={{ display:"flex", gap:0, borderBottom:"2px solid #eef0f8", marginBottom:20 }}>
               {[["hot","🔥 הכי חמים"],["new","✨ חדשים"],["quality","💎 איכות"]].map(([id, label]) => (
                 <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
-                  style={{ border: "none", borderRadius: 10, padding: "9px 22px", fontWeight: 700, fontSize: 14, transition: "var(--tr)",
-                    background: activeTab === id ? "linear-gradient(135deg,var(--blue-2),var(--blue))" : "transparent",
-                    color: activeTab === id ? "#fff" : "var(--text-2)",
-                    boxShadow: activeTab === id ? "0 4px 14px rgba(0,56,168,.3)" : "none" }}>
+                  style={{
+                    background:"none",
+                    border:"none",
+                    borderBottom: activeTab===id ? "3px solid var(--blue)" : "3px solid transparent",
+                    marginBottom:-2,
+                    padding:"10px 22px",
+                    fontWeight: activeTab===id ? 700 : 500,
+                    fontSize:14,
+                    cursor:"pointer",
+                    color: activeTab===id ? "var(--blue)" : "var(--text-2)",
+                    transition:"color .15s, border-color .15s",
+                  }}
+                  onMouseEnter={e => { if(activeTab!==id) e.currentTarget.style.color="var(--text)"; }}
+                  onMouseLeave={e => { if(activeTab!==id) e.currentTarget.style.color="var(--text-2)"; }}>
                   {label}
                 </button>
               ))}
