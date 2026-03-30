@@ -3,6 +3,7 @@
 //  Place in:  client/src/App.jsx
 // ============================================================
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams, useMatch } from "react-router-dom";
 import {
   authAPI, dealsAPI, commentsAPI, categoriesAPI, adminAPI, hunterAPI,
   saveToken, clearToken, getToken,
@@ -37,17 +38,34 @@ const timeAgo = (d) => {
 
 // ════════════════════════════════════════════════════════════
 export default function App() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dealMatch = useMatch('/deal/:id');
+
+  // Derive filter state from URL
+  const activeTab      = searchParams.get('sort')     || 'hot';
+  const activeCategory = searchParams.get('category') || 'הכל';
+  const search         = searchParams.get('search')   || '';
+  const page           = parseInt(searchParams.get('page')) || 1;
+
+  const updateParams = (updates) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([k, v]) => {
+        if (v === null || v === undefined || v === '' || v === 1) next.delete(k);
+        else next.set(k, String(v));
+      });
+      return next;
+    }, { replace: true });
+  };
+
   const [user,          setUser]          = useState(null);
   const [deals,         setDeals]         = useState([]);
   const [categories,    setCategories]    = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [modal,         setModal]         = useState(null);
   const [selectedDeal,  setSelectedDeal]  = useState(null);
-  const [activeTab,     setActiveTab]     = useState("hot");
-  const [activeCategory,setActiveCategory]= useState("הכל");
-  const [search,        setSearch]        = useState("");
   const [toast,         setToast]         = useState(null);
-  const [page,          setPage]          = useState(1);
   const [totalPages,    setTotalPages]    = useState(1);
   const [adminOpen,     setAdminOpen]     = useState(false);
 
@@ -72,9 +90,10 @@ export default function App() {
 
   // ── Fetch deals ────────────────────────────────────────────
   const fetchDeals = useCallback(async () => {
+    if (dealMatch) return; // don't fetch feed when on deal page
     setLoading(true);
     try {
-      const params = { sort: activeTab === "hot" ? "hot" : activeTab === "quality" ? "quality" : "new", page };
+      const params = { sort: activeTab, page };
       if (activeCategory !== "הכל") params.category = activeCategory;
       if (search) params.search = search;
       const data = await dealsAPI.list(params);
@@ -85,7 +104,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, activeCategory, search, page]);
+  }, [searchParams, dealMatch]);
 
   useEffect(() => { fetchDeals(); }, [fetchDeals]);
 
@@ -140,13 +159,20 @@ export default function App() {
     } catch (e) { showToast(e.message, "error"); }
   };
 
-  // ── Open deal modal ────────────────────────────────────────
-  const openDeal = async (id) => {
-    try {
-      const deal = await dealsAPI.get(id);
-      setSelectedDeal(deal);
-    } catch (e) { showToast(e.message, "error"); }
-  };
+  // ── Open deal page ─────────────────────────────────────────
+  const openDeal = (id) => navigate('/deal/' + id);
+
+  // ── Load deal from URL ─────────────────────────────────────
+  useEffect(() => {
+    if (dealMatch) {
+      const id = parseInt(dealMatch.params.id);
+      if (!selectedDeal || selectedDeal.id !== id) {
+        dealsAPI.get(id).then(setSelectedDeal).catch(() => navigate('/'));
+      }
+    } else {
+      setSelectedDeal(null);
+    }
+  }, [dealMatch?.params.id]);
 
   // ── Admin actions ──────────────────────────────────────────
   const loadAdmin = useCallback(async () => {
@@ -277,7 +303,7 @@ export default function App() {
                 <input
                   placeholder="חפש דילים, מוצרים, חנויות..."
                   value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(1); }}
+                  onChange={e => updateParams({ search: e.target.value, page: null })}
                   style={{ background:"transparent", border:"none", color:"var(--text)", fontSize:14, fontWeight:500, flex:1, outline:"none", padding:"10px 10px", direction:"rtl", width:"100%" }}
                 />
               </div>
@@ -321,7 +347,7 @@ export default function App() {
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 24px" }}>
             <div style={{ display:"flex", gap:0, overflowX:"auto", scrollbarWidth:"none", msOverflowStyle:"none" }}>
               {["הכל", ...categories.map(c => c.name)].map(c => (
-                <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
+                <button key={c} onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
                   style={{
                     background:"none",
                     border:"none",
@@ -356,9 +382,9 @@ export default function App() {
           onDelete={adminDeleteDeal}
           onBanUser={adminBanUser}
         />
-      ) : selectedDeal ? (
+      ) : dealMatch ? (
         <DealPage deal={selectedDeal} currentUser={user} onVote={vote} onComment={addComment}
-          onBack={() => setSelectedDeal(null)} isAdmin={user?.role === "admin"}
+          onBack={() => navigate('/')} isAdmin={user?.role === "admin"}
           onAdminUpdate={adminUpdateDeal} onAdminDelete={adminDeleteDeal} />
       ) : (
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
@@ -367,7 +393,7 @@ export default function App() {
         <div className="mobile-only" style={{ marginBottom:12 }}>
           <div style={{ display:"flex",alignItems:"center",background:"#fff",border:"1.5px solid var(--border)",borderRadius:18,padding:"0 14px",boxShadow:"var(--sh-sm)" }}>
             <span style={{ color:"var(--text-3)",fontSize:15 }}>🔍</span>
-            <input placeholder="חפש דילים, מוצרים, חנויות..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            <input placeholder="חפש דילים, מוצרים, חנויות..." value={search} onChange={e => updateParams({ search: e.target.value, page: null })}
               style={{ background:"transparent",border:"none",color:"var(--text)",fontSize:14,flex:1,outline:"none",padding:"13px 10px",direction:"rtl",width:"100%" }} />
           </div>
         </div>
@@ -377,7 +403,7 @@ export default function App() {
           <div style={{ background:"var(--surface)",border:"1px solid var(--border)",borderRadius:18,padding:12,boxShadow:"var(--sh)" }}>
             <div style={{ display:"flex",gap:8,overflowX:"auto",paddingBottom:4,scrollbarWidth:"none" }}>
               {[["hot","🔥 הכי חמים"],["new","✨ חדשים"],["quality","💎 איכות"]].map(([id,label]) => (
-                <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
+                <button key={id} onClick={() => updateParams({ sort: id, page: null })}
                   style={{ border:"none",borderRadius:999,padding:"9px 14px",fontWeight:800,fontSize:13,whiteSpace:"nowrap",flexShrink:0,
                     background:activeTab===id?"linear-gradient(135deg,var(--blue-2),var(--blue))":"var(--surface-2)",
                     color:activeTab===id?"#fff":"var(--text-2)" }}>
@@ -385,7 +411,7 @@ export default function App() {
                 </button>
               ))}
               {["הכל",...categories.map(c=>c.name)].map(c => (
-                <button key={c} onClick={() => { setActiveCategory(c); setPage(1); }}
+                <button key={c} onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
                   style={{ border:"1px solid var(--border)",borderRadius:999,padding:"9px 14px",fontWeight:800,fontSize:13,whiteSpace:"nowrap",flexShrink:0,
                     background:activeCategory===c?"var(--blue)":"#fff",
                     color:activeCategory===c?"#fff":"var(--text-2)" }}>
@@ -403,7 +429,7 @@ export default function App() {
             {/* Sort tabs */}
             <div style={{ display:"flex", gap:0, borderBottom:"2px solid #eef0f8", marginBottom:20 }}>
               {[["hot","🔥 הכי חמים"],["new","✨ חדשים"],["quality","💎 איכות"]].map(([id, label]) => (
-                <button key={id} onClick={() => { setActiveTab(id); setPage(1); }}
+                <button key={id} onClick={() => updateParams({ sort: id, page: null })}
                   style={{
                     background:"none",
                     border:"none",
@@ -450,7 +476,7 @@ export default function App() {
                 <div style={{ fontWeight:900,fontSize:24,color:"var(--text)",marginBottom:10 }}>לא נמצאו דילים</div>
                 <div style={{ color:"var(--text-2)",fontSize:15,lineHeight:1.7,maxWidth:380,margin:"0 auto 22px" }}>לא מצאנו תוצאות לחיפוש הזה. נסה לשנות את החיפוש, לעבור קטגוריה, או לפרסם דיל חדש.</div>
                 <div style={{ display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap" }}>
-                  <button className="btn btn-ghost" onClick={() => { setSearch(""); setActiveCategory("הכל"); setPage(1); }} style={{ padding:"12px 16px",borderRadius:12 }}>נקה סינון</button>
+                  <button className="btn btn-ghost" onClick={() => setSearchParams({}, { replace: true })} style={{ padding:"12px 16px",borderRadius:12 }}>נקה סינון</button>
                   <button className="btn btn-primary" onClick={() => user ? setModal("newdeal") : setModal("register")} style={{ padding:"12px 16px",borderRadius:12 }}>
                     {user ? "שתף דיל חדש" : "הצטרף לקהילה"}
                   </button>
@@ -473,7 +499,7 @@ export default function App() {
                 {totalPages > 1 && (
                   <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 28 }}>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                      <button key={p} onClick={() => setPage(p)}
+                      <button key={p} onClick={() => updateParams({ page: p })}
                         style={{ width: 38, height: 38, borderRadius: 10, border: "1.5px solid var(--border)", cursor: "pointer",
                           background: p === page ? "linear-gradient(135deg,var(--blue-2),var(--blue))" : "var(--surface)",
                           color: p === page ? "#fff" : "var(--text-2)", fontWeight: 700, fontSize: 14,
