@@ -339,17 +339,23 @@ export default function App() {
           </div>
 
           {/* Row 2: Categories */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, minHeight:54, overflowX:"auto", scrollbarWidth:"none", msOverflowStyle:"none", borderTop:"1px solid rgba(0,56,168,0.06)" }}>
-            {["הכל", ...categories.map(c => c.name)].map(c => {
-              const active = activeCategory === c;
-              return (
-                <button key={c} type="button" onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
-                  style={{ height:34, padding:"0 14px", borderRadius:999, border: active ? "1px solid rgba(0,56,168,0.12)" : "1px solid transparent", background: active ? "var(--surface-2)" : "transparent", color: active ? "var(--blue)" : "var(--text-2)", fontSize:14, fontWeight: active ? 700 : 500, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .18s ease" }}>
-                  {c}
-                </button>
-              );
-            })}
-          </div>
+          {(() => {
+            const catIcons = { 'הכל':'🏷️', 'אלקטרוניקה':'💻', 'אוכל ומשקאות':'🍔', 'אופנה':'👗', 'נסיעות':'✈️', 'ספורט':'⚽', 'בית וגינה':'🏡', 'תינוקות':'🍼', 'משחקים':'🎮', 'בריאות':'💊' };
+            return (
+              <div style={{ display:"flex", alignItems:"center", gap:8, minHeight:54, overflowX:"auto", scrollbarWidth:"none", msOverflowStyle:"none", borderTop:"1px solid rgba(0,56,168,0.06)" }}>
+                {["הכל", ...categories.map(c => c.name)].map(c => {
+                  const active = activeCategory === c;
+                  return (
+                    <button key={c} type="button" onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
+                      style={{ height:34, padding:"0 14px", borderRadius:999, border: active ? "1px solid rgba(0,56,168,0.12)" : "1px solid transparent", background: active ? "var(--surface-2)" : "transparent", color: active ? "var(--blue)" : "var(--text-2)", fontSize:14, fontWeight: active ? 700 : 500, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .18s ease", display:"flex", alignItems:"center", gap:5 }}>
+                      <span style={{ fontSize:15, lineHeight:1 }}>{catIcons[c] || '🏷️'}</span>
+                      <span>{c}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
         </div>
       </header>
