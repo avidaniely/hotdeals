@@ -278,12 +278,13 @@ export default function App() {
           .deal-page-grid{grid-template-columns:1fr!important}
           .deal-page-sticky{position:static!important}
           .deal-card{border-radius:18px}
+          .deals-grid{grid-template-columns:1fr!important}
         }
       `}</style>
 
       {/* HEADER */}
       <header dir="rtl" style={{ position:"sticky", top:0, zIndex:100, width:"100%", background:"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(13,27,62,0.06)", fontFamily:"'Noto Sans Hebrew',Arial,sans-serif" }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"10px 24px 0" }}>
+        <div style={{ maxWidth:1600, margin:"0 auto", padding:"10px 40px 0" }}>
 
           {/* Row 1 */}
           <div style={{ display:"flex", alignItems:"center", gap:16, minHeight:74 }}>
@@ -391,7 +392,7 @@ export default function App() {
           <div style={{ textAlign:"center", padding:"80px 24px", color:"var(--text-2)", fontSize:16 }}>טוען דיל...</div>
         )
       ) : (
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+      <main style={{ maxWidth: 1600, margin: "0 auto", padding: "28px 40px" }}>
 
         {/* Mobile search */}
         <div className="mobile-only" style={{ marginBottom:12 }}>
@@ -426,7 +427,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28 }} className="main-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 36 }} className="main-grid">
 
           {/* Feed */}
           <div>
@@ -488,7 +489,7 @@ export default function App() {
               </div>
             ) : (
               <>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 18 }}>
                   {deals.map((deal, index) => (
                     <div key={deal.id} style={{ animationDelay:`${index * 70}ms` }}>
                       <DealCard deal={deal} currentUser={user}
@@ -808,7 +809,7 @@ function DealPage({ deal, currentUser, onVote, onComment, onBack, isAdmin, onAdm
   const hotPct = Math.round(+deal.hot / Math.max(totalVotes, 1) * 100);
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px" }}>
+    <main style={{ maxWidth: 1600, margin: "0 auto", padding: "28px 40px" }}>
       {/* Back */}
       <button onClick={onBack} style={{ display:"inline-flex",alignItems:"center",gap:8,background:"var(--surface)",border:"1.5px solid var(--border)",borderRadius:12,padding:"9px 18px",fontSize:14,fontWeight:700,color:"var(--text-2)",cursor:"pointer",marginBottom:28,boxShadow:"var(--sh-sm)",transition:"var(--tr)" }}
         onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border-2)";e.currentTarget.style.color="var(--blue)"}}
