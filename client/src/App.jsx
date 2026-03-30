@@ -202,9 +202,8 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'Rubik',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
+    <div style={{ fontFamily: "'Ploni',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         :root{
           --blue:#0038A8;--blue-2:#1a56db;--blue-dk:#002A8A;
@@ -283,7 +282,7 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <header dir="rtl" style={{ position:"sticky", top:0, zIndex:100, width:"100%", background:"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(13,27,62,0.06)", fontFamily:"'Rubik',Arial,sans-serif" }}>
+      <header dir="rtl" style={{ position:"sticky", top:0, zIndex:100, width:"100%", background:"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(13,27,62,0.06)", fontFamily:"'Ploni',Arial,sans-serif" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"10px 24px 0" }}>
 
           {/* Row 1 */}
