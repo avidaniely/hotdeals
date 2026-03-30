@@ -202,7 +202,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'Ploni',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
+    <div style={{ fontFamily: "'Noto Sans Hebrew',Arial,sans-serif", direction: "rtl", minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
         :root{
@@ -282,7 +282,7 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <header dir="rtl" style={{ position:"sticky", top:0, zIndex:100, width:"100%", background:"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(13,27,62,0.06)", fontFamily:"'Ploni',Arial,sans-serif" }}>
+      <header dir="rtl" style={{ position:"sticky", top:0, zIndex:100, width:"100%", background:"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", borderBottom:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(13,27,62,0.06)", fontFamily:"'Noto Sans Hebrew',Arial,sans-serif" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"10px 24px 0" }}>
 
           {/* Row 1 */}
