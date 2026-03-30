@@ -283,90 +283,110 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <header style={{ background:"#fff", color:"var(--text)", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 8px rgba(0,0,0,.07)" }}>
+      <header dir="rtl" style={{ position:"sticky", top:0, zIndex:100, width:"100%", fontFamily:"'Rubik',Arial,sans-serif", background:"linear-gradient(180deg,rgba(13,27,62,0.96) 0%,rgba(0,42,138,0.94) 100%)", boxShadow:"0 10px 30px rgba(0,22,84,0.18)", backdropFilter:"blur(10px)", WebkitBackdropFilter:"blur(10px)", borderBottom:"1px solid rgba(255,255,255,0.08)", overflow:"hidden" }}>
 
-        {/* Row 1: Logo + Search + User */}
-        <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 24px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:16, height:64 }}>
+        {/* Rainbow strip */}
+        <div style={{ height:4, background:"linear-gradient(90deg,var(--hot) 0%,#ff7a1a 22%,var(--warn) 45%,var(--cold) 72%,var(--blue-2) 100%)" }} />
 
-            {/* Logo */}
-            <div style={{ flexShrink:0 }}>
-              <img src="/logo.png" alt="hotILdeals" style={{ height:46, width:"auto" }} />
-            </div>
+        <div style={{ position:"relative", overflow:"hidden" }}>
+          {/* Ambient glow */}
+          <div style={{ position:"absolute", inset:0, pointerEvents:"none", background:"radial-gradient(circle at 12% 20%,rgba(255,69,0,0.16) 0%,transparent 28%),radial-gradient(circle at 85% 30%,rgba(0,153,255,0.14) 0%,transparent 26%)" }} />
 
-            {/* Search */}
-            <div style={{ flex:1, maxWidth:600 }} className="desktop-only">
-              <div style={{ display:"flex", alignItems:"center", background:"#f3f5fb", border:"2px solid #e4e9f5", borderRadius:8, padding:"0 14px", minHeight:42, transition:"var(--tr)" }}
-                onFocusCapture={e => { e.currentTarget.style.borderColor="var(--blue)"; e.currentTarget.style.background="#fff"; e.currentTarget.style.boxShadow="0 0 0 3px rgba(0,56,168,.1)"; }}
-                onBlurCapture={e => { e.currentTarget.style.borderColor="#e4e9f5"; e.currentTarget.style.background="#f3f5fb"; e.currentTarget.style.boxShadow="none"; }}>
-                <span style={{ color:"#aab", fontSize:15, flexShrink:0 }}>🔍</span>
-                <input
-                  placeholder="חפש דילים, מוצרים, חנויות..."
-                  value={search}
-                  onChange={e => updateParams({ search: e.target.value, page: null })}
-                  style={{ background:"transparent", border:"none", color:"var(--text)", fontSize:14, fontWeight:500, flex:1, outline:"none", padding:"10px 10px", direction:"rtl", width:"100%" }}
-                />
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"10px 24px 12px", position:"relative" }}>
+
+            {/* Row 1 */}
+            <div style={{ display:"flex", alignItems:"center", gap:18, minHeight:76 }}>
+
+              {/* Logo */}
+              <a href="/" style={{ display:"flex", alignItems:"center", gap:12, flexShrink:0, textDecoration:"none", color:"#fff" }}>
+                <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"center", width:56, height:56, borderRadius:18, background:"linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.08) 100%)", border:"1px solid rgba(255,255,255,0.14)", boxShadow:"0 10px 24px rgba(0,0,0,0.18)" }}>
+                  <img src="/logo.png" alt="hotILdeals" style={{ height:38, width:"auto", display:"block", filter:"drop-shadow(0 2px 6px rgba(0,0,0,0.18))" }} />
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", lineHeight:1.05 }}>
+                  <span style={{ fontSize:24, fontWeight:800, letterSpacing:"-0.02em", color:"#fff" }}>hotILdeals</span>
+                  <span style={{ fontSize:12, fontWeight:500, color:"rgba(255,255,255,0.72)" }}>הדילים החמים בישראל</span>
+                </div>
+              </a>
+
+              {/* Search */}
+              <div className="desktop-only" style={{ flex:1, display:"flex", justifyContent:"center", minWidth:0 }}>
+                <div style={{ width:"100%", maxWidth:700 }}>
+                  <div style={{ display:"flex", alignItems:"center", minHeight:54, borderRadius:999, background:"rgba(255,255,255,0.96)", border:"1px solid rgba(255,255,255,0.18)", boxShadow:"0 8px 24px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.55)", overflow:"hidden" }}>
+                    <div style={{ width:52, height:52, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", color:"var(--blue)" }}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0a7 7 0 0114 0z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <input
+                      placeholder="חפש דילים, מוצרים, חנויות..."
+                      value={search}
+                      onChange={e => updateParams({ search: e.target.value, page: null })}
+                      style={{ flex:1, width:"100%", background:"transparent", border:"none", outline:"none", color:"var(--text)", fontSize:15, fontWeight:500, padding:"0 4px", direction:"rtl" }}
+                    />
+                    <div style={{ display:"flex", alignItems:"center", paddingLeft:8 }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:"var(--text-2)", background:"var(--surface-2)", border:"1px solid var(--border)", padding:"7px 10px", borderRadius:999, whiteSpace:"nowrap" }}>חיפוש חכם</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* User area */}
+              <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0, marginRight:"auto" }}>
+                {user?.role === "admin" && (
+                  <button type="button" onClick={() => { setAdminOpen(true); loadAdmin(); window.scrollTo(0,0); }} style={{ position:"relative", height:42, padding:"0 16px", borderRadius:999, border:"1px solid rgba(255,255,255,0.14)", background:"rgba(255,255,255,0.08)", color:"#fff", display:"flex", alignItems:"center", gap:8, fontSize:14, fontWeight:600, cursor:"pointer", backdropFilter:"blur(8px)" }}>
+                    <span style={{ fontSize:15 }}>⚙️</span>
+                    <span>ניהול</span>
+                    {adminStats?.pending > 0 && <span style={{ minWidth:20, height:20, padding:"0 6px", borderRadius:999, background:"var(--danger)", color:"#fff", fontSize:11, fontWeight:800, display:"inline-flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 16px rgba(232,48,74,0.35)" }}>{adminStats.pending}</span>}
+                  </button>
+                )}
+                {user ? (
+                  <>
+                    <button type="button" onClick={() => setModal("newdeal")} style={{ height:44, padding:"0 18px", borderRadius:999, border:"none", background:"linear-gradient(135deg,var(--hot) 0%,#ff6a1a 100%)", color:"#fff", display:"flex", alignItems:"center", gap:8, fontSize:14, fontWeight:800, cursor:"pointer", boxShadow:"0 12px 24px rgba(255,69,0,0.28)" }}>
+                      <span style={{ fontSize:16, lineHeight:1 }}>＋</span>
+                      <span>שתף דיל</span>
+                    </button>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 8px 6px 10px", borderRadius:999, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", backdropFilter:"blur(8px)" }}>
+                      <div style={{ width:34, height:34, borderRadius:"50%", background:"linear-gradient(135deg,rgba(255,255,255,0.95) 0%,rgba(224,233,255,0.9) 100%)", color:"var(--blue)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, flexShrink:0 }}>
+                        {user.avatar}
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", lineHeight:1.1 }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:"#fff", maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.username}</span>
+                        {user.role === "admin" && <span style={{ fontSize:10, color:"rgba(255,200,100,0.9)", fontWeight:700 }}>מנהל</span>}
+                      </div>
+                      <button type="button" onClick={logout} style={{ border:"none", background:"transparent", padding:0, margin:0, color:"rgba(255,255,255,0.74)", fontSize:11, fontWeight:600, cursor:"pointer" }}>יציאה</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => setModal("login")} style={{ height:42, padding:"0 18px", borderRadius:999, border:"1px solid rgba(255,255,255,0.14)", background:"rgba(255,255,255,0.06)", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>כניסה</button>
+                    <button type="button" onClick={() => setModal("register")} style={{ height:44, padding:"0 20px", borderRadius:999, border:"none", background:"linear-gradient(135deg,var(--hot) 0%,#ff6a1a 100%)", color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", boxShadow:"0 12px 24px rgba(255,69,0,0.28)" }}>הצטרף</button>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* User area */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0, marginRight:"auto" }}>
-              {user ? (
-                <>
-                  {user.role === "admin" && (
-                    <button className="btn btn-ghost" style={{ padding:"7px 14px", fontSize:13, borderRadius:8 }}
-                      onClick={() => { setAdminOpen(true); loadAdmin(); window.scrollTo(0, 0); }}>
-                      ⚙️ ניהול
-                      {adminStats?.pending > 0 && <span style={{ background:"var(--danger)", color:"#fff", borderRadius:"50%", width:18, height:18, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:900, marginRight:4 }}>{adminStats.pending}</span>}
-                    </button>
-                  )}
-                  <div style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 10px", background:"var(--surface-2)", borderRadius:8, border:"1.5px solid var(--border)" }}>
-                    <span style={{ fontSize:20 }}>{user.avatar}</span>
-                    <div style={{ lineHeight:1.2 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{user.username}</div>
-                      {user.role === "admin" && <div style={{ fontSize:10, color:"var(--blue)", fontWeight:700 }}>מנהל</div>}
-                    </div>
-                    <button onClick={logout} style={{ background:"none", border:"none", color:"var(--text-3)", fontSize:12, fontWeight:600, cursor:"pointer", padding:"2px 4px" }}>יציאה</button>
-                  </div>
-                  <button className="btn btn-primary" onClick={() => setModal("newdeal")} style={{ padding:"8px 20px", fontSize:13, borderRadius:8, fontWeight:700 }}>
-                    + שתף דיל
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button className="btn btn-ghost" style={{ padding:"8px 16px", fontSize:13, borderRadius:8 }} onClick={() => setModal("login")}>כניסה</button>
-                  <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:13, borderRadius:8 }} onClick={() => setModal("register")}>הצטרף</button>
-                </>
-              )}
+            {/* Row 2: Categories */}
+            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0, color:"rgba(255,255,255,0.76)", fontSize:13, fontWeight:700 }}>
+                <div style={{ width:30, height:30, borderRadius:999, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.08)" }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M4 7h16M7 12h13M10 17h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                </div>
+                <span>קטגוריות</span>
+              </div>
+              <div style={{ flex:1, minWidth:0, overflowX:"auto", scrollbarWidth:"none", msOverflowStyle:"none" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:"max-content", paddingBottom:2 }}>
+                  {["הכל", ...categories.map(c => c.name)].map(c => {
+                    const active = activeCategory === c;
+                    return (
+                      <button key={c} type="button" onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
+                        style={{ height:38, padding:"0 16px", borderRadius:999, border: active ? "1px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.08)", background: active ? "linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.10) 100%)" : "rgba(255,255,255,0.04)", color: active ? "#fff" : "rgba(255,255,255,0.78)", fontSize:13, fontWeight: active ? 800 : 600, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:8, boxShadow: active ? "0 8px 20px rgba(0,0,0,0.12)" : "none" }}>
+                        {active && <span style={{ width:8, height:8, borderRadius:"50%", background:"var(--hot)", boxShadow:"0 0 0 4px rgba(255,69,0,0.16)", flexShrink:0 }} />}
+                        <span>{c}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Row 2: Category nav */}
-        <div style={{ borderTop:"1px solid #eef0f8", background:"#fafbff" }}>
-          <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 24px" }}>
-            <div style={{ display:"flex", gap:0, overflowX:"auto", scrollbarWidth:"none", msOverflowStyle:"none" }}>
-              {["הכל", ...categories.map(c => c.name)].map(c => (
-                <button key={c} onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
-                  style={{
-                    background:"none",
-                    border:"none",
-                    borderBottom: activeCategory===c ? "3px solid var(--blue)" : "3px solid transparent",
-                    padding:"9px 16px",
-                    fontSize:13,
-                    fontWeight: activeCategory===c ? 700 : 500,
-                    whiteSpace:"nowrap",
-                    flexShrink:0,
-                    cursor:"pointer",
-                    color: activeCategory===c ? "var(--blue)" : "var(--text-2)",
-                    transition:"color .15s, border-color .15s",
-                  }}
-                  onMouseEnter={e => { if(activeCategory!==c) e.currentTarget.style.color="var(--text)"; }}
-                  onMouseLeave={e => { if(activeCategory!==c) e.currentTarget.style.color="var(--text-2)"; }}>
-                  {c}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </header>
