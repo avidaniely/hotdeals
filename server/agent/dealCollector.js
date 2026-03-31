@@ -184,12 +184,15 @@ async function collectWithBrowser(source, limit) {
     headless: true,
     args: [
       '--no-sandbox',
+      '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--single-process',
-      '--disable-setuid-sandbox',
+      '--disable-software-rasterizer',
       '--disable-extensions',
       '--disable-background-networking',
+      '--disable-default-apps',
+      '--no-first-run',
+      '--no-zygote',
     ],
     ...(proxy ? { proxy } : {}),
   });
