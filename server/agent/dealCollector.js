@@ -174,23 +174,30 @@ async function collectWithBrowser(source, limit) {
   const StealthPlugin = require('puppeteer-extra-plugin-stealth');
   chromium.use(StealthPlugin());
 
+  // Chromium doesn't support authenticated SOCKS5 natively.
+  // Use proxychains to wrap Chromium so it handles SOCKS5 auth transparently.
+  let launchPath = chromiumPath;
   const proxies = source.use_proxy ? loadProxies() : [];
-  let proxy = undefined;
   if (proxies.length > 0) {
     const raw = proxies[Math.floor(Math.random() * proxies.length)];
-    // Parse out credentials so special chars in password don't break URL parsing
-    const m = raw.match(/^(socks[45]:\/\/|https?:\/\/)(?:([^:@]+):([^@]+)@)?(.+)$/);
+    const proxychainsConf = '/tmp/proxychains-hotdeals.conf';
+    // Parse proxy URL into proxychains format: type host port [user pass]
+    const m = raw.match(/^socks([45]):\/\/(?:([^:@]+):([^@]+)@)?([^:]+):(\d+)/);
     if (m) {
-      proxy = { server: m[1] + m[4] };
-      if (m[2]) proxy.username = m[2];
-      if (m[3]) proxy.password = m[3];
-    } else {
-      proxy = { server: raw };
+      const [, ver, user, pass, host, port] = m;
+      const authLine = user ? `${user} ${pass}` : '';
+      fs.writeFileSync(proxychainsConf,
+        `strict_chain\nproxy_dns\n[ProxyList]\nsocks${ver} ${host} ${port} ${authLine}\n`);
+      // Create wrapper script
+      const wrapper = '/tmp/chromium-proxychains.sh';
+      fs.writeFileSync(wrapper, `#!/bin/sh\nexec proxychains4 -f ${proxychainsConf} ${chromiumPath} "$@"\n`);
+      fs.chmodSync(wrapper, 0o755);
+      launchPath = wrapper;
     }
   }
 
   const browser = await chromium.launch({
-    executablePath: chromiumPath,
+    executablePath: launchPath,
     headless: true,
     args: [
       '--no-sandbox',
@@ -204,7 +211,6 @@ async function collectWithBrowser(source, limit) {
       '--no-first-run',
       '--no-zygote',
     ],
-    ...(proxy ? { proxy } : {}),
   });
 
   try {
