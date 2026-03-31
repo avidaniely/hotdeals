@@ -9,6 +9,7 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const mysql    = require('mysql2/promise');
 const { startScheduler, runHunter } = require('./agent/dealHunter');
+const { startOpenAIScheduler, runOpenAIJob, importDealsFromPayload } = require('./agent/openaiDealer');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -262,6 +263,40 @@ const db = mysql.createPool({
         [k, v]
       );
     }
+
+    // Seed OpenAI Dealer config keys (won't overwrite existing values)
+    const DEFAULT_OPENAI_PROMPT =
+      'Scan these Israeli retail sites for today\'s deals: {{sites}}\n\n' +
+      'Return 6–10 best deals per site. Score 0–100 based on discount strength, value, brand quality, demand.\n\n' +
+      'Rules:\n' +
+      '- Ignore out-of-stock items\n' +
+      '- Ignore unclear bundles\n' +
+      '- No duplicates within same site\n' +
+      '- images: max 3, prefer 2, absolute URLs only\n\n' +
+      'Return JSON only. No markdown. No commentary.\n\n' +
+      'Schema:\n' +
+      '{"d":"YYYY-MM-DD","k":["r","n","p","o","dp","s","u","i"],"sites":{"site.com":[[1,"name",999,1299,23,87,"https://url",["https://img1"]]]}}\n\n' +
+      'Field order per deal array: rank, product_name, price_ils, old_price_ils, discount_percent, score, product_url, images';
+
+    for (const [k, v] of [
+      ['openai_enabled',       '0'],
+      ['openai_model',         'gpt-4o-mini'],
+      ['openai_sites',         '["ksp.co.il","ivory.co.il","bug.co.il"]'],
+      ['openai_schedule',      '0 8 * * *'],
+      ['openai_timeout',       '60000'],
+      ['openai_max_retries',   '3'],
+      ['openai_last_run',      ''],
+      ['openai_last_status',   ''],
+      ['openai_last_error',    ''],
+      ['openai_last_response', ''],
+      ['openai_prompt',        DEFAULT_OPENAI_PROMPT],
+    ]) {
+      await db.execute(
+        'INSERT INTO hunter_config (config_key, config_value) VALUES (?,?) ON DUPLICATE KEY UPDATE config_value=config_value',
+        [k, v]
+      );
+    }
+    console.log('✅ OpenAI Dealer config seeded');
   } catch (e) {
     console.error('Migration error:', e.message);
   }
@@ -823,8 +858,64 @@ app.get('/api/admin/hunter-logs', adminAuth, async (req, res) => {
   res.json(rows);
 });
 
+// ════════════════════════════════════════════════════════════
+//  IMPORT DEALS (from external AI agent)
+// ════════════════════════════════════════════════════════════
+
+// POST /api/admin/import-deals
+app.post('/api/admin/import-deals', adminAuth, async (req, res) => {
+  try {
+    const payload = req.body.payload || req.body;
+    if (!payload || !payload.sites) return res.status(400).json({ error: 'Missing payload.sites' });
+    const result = await importDealsFromPayload(payload, db);
+    res.json(result);
+  } catch (e) {
+    console.error('import-deals error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  OPENAI DEALER CONFIG & RUN (admin)
+// ════════════════════════════════════════════════════════════
+
+// GET /api/admin/openai-config
+app.get('/api/admin/openai-config', adminAuth, async (req, res) => {
+  const [rows] = await db.execute(
+    "SELECT config_key, config_value FROM hunter_config WHERE config_key LIKE 'openai_%'"
+  );
+  const config = Object.fromEntries(rows.map(r => [r.config_key, r.config_value]));
+  res.json(config);
+});
+
+// POST /api/admin/openai-config
+app.post('/api/admin/openai-config', adminAuth, async (req, res) => {
+  const allowed = ['openai_enabled','openai_model','openai_sites','openai_schedule','openai_timeout','openai_max_retries','openai_prompt'];
+  const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
+  if (!entries.length) return res.status(400).json({ error: 'no valid keys' });
+  for (const [key, value] of entries) {
+    await db.execute(
+      'INSERT INTO hunter_config (config_key, config_value) VALUES (?,?) ON DUPLICATE KEY UPDATE config_value=?',
+      [key, value, value]
+    );
+  }
+  res.json({ success: true });
+});
+
+// POST /api/admin/openai-run  — manual trigger
+app.post('/api/admin/openai-run', adminAuth, async (req, res) => {
+  try {
+    const result = await runOpenAIJob(db, 'manual');
+    res.json(result);
+  } catch (e) {
+    console.error('openai-run error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🔥 hotILdeals server running on port ${PORT}`);
   startScheduler(db);
+  startOpenAIScheduler(db);
 });

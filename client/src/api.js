@@ -107,4 +107,8 @@ export const hunterAPI = {
   assignPrompt: (sourceId, promptId)  => api(`/admin/sources/${sourceId}`, { method: 'PATCH', body: { prompt_id: promptId } }),
   toggleProxy:  (id, use_proxy)       => api(`/admin/sources/${id}`, { method: 'PATCH', body: { use_proxy } }),
   updateSource: (id, body)            => api(`/admin/sources/${id}`, { method: 'PATCH', body }),
+  importDeals:     (payload)          => api('/admin/import-deals',  { method: 'POST', body: { payload } }),
+  getOpenAIConfig: ()                 => api('/admin/openai-config'),
+  saveOpenAIConfig:(body)             => api('/admin/openai-config', { method: 'POST', body }),
+  runOpenAI:       ()                 => api('/admin/openai-run',    { method: 'POST' }),
 };
