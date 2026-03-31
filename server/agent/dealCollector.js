@@ -147,14 +147,27 @@ function randomDelay(min = 500, max = 2000) {
 // ── Browser adapter (Playwright + stealth) ───────────────────
 async function collectWithBrowser(source, limit) {
   // Lazy-require so missing playwright doesn't crash the whole server
-  let chromiumPath;
-  try {
-    const { execSync } = require('child_process');
-    chromiumPath = execSync('which chromium-browser || which chromium || which google-chrome 2>/dev/null', { encoding: 'utf8' }).trim();
-  } catch { chromiumPath = null; }
+  // Try known paths first (Alpine apk installs binary at /usr/lib/chromium/chromium,
+  // the /usr/bin/chromium-browser symlink points to a launcher script that may not work in Docker)
+  const { existsSync } = require('fs');
+  const { execSync } = require('child_process');
+  let chromiumPath = null;
+  const knownPaths = [
+    '/usr/lib/chromium/chromium',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+  ];
+  for (const p of knownPaths) {
+    if (existsSync(p)) { chromiumPath = p; break; }
+  }
+  if (!chromiumPath) {
+    try {
+      chromiumPath = execSync('which chromium-browser || which chromium || which google-chrome 2>/dev/null', { encoding: 'utf8' }).trim() || null;
+    } catch { chromiumPath = null; }
+  }
 
   if (!chromiumPath) {
-    throw new Error('No system Chromium found — set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 and install chromium');
+    throw new Error('No system Chromium found — install chromium in the container');
   }
 
   const { chromium } = require('playwright-extra');
