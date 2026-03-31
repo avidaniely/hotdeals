@@ -81,6 +81,10 @@ const db = mysql.createPool({
     await db.execute('ALTER TABLE hunter_sources ADD COLUMN search_query VARCHAR(255) DEFAULT NULL')
       .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
 
+    // Add adapter_mode column to hunter_sources (http or browser)
+    await db.execute("ALTER TABLE hunter_sources ADD COLUMN adapter_mode VARCHAR(10) NOT NULL DEFAULT 'http'")
+      .catch(e => { if (e.code !== 'ER_DUP_FIELDNAME') throw e; });
+
     // hunter_prompts table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS hunter_prompts (
@@ -289,7 +293,9 @@ const db = mysql.createPool({
       ['openai_last_status',   ''],
       ['openai_last_error',    ''],
       ['openai_last_response', ''],
-      ['openai_prompt',        DEFAULT_OPENAI_PROMPT],
+      ['openai_prompt',           DEFAULT_OPENAI_PROMPT],
+      ['openai_scoring_prompt',   ''],
+      ['openai_candidate_limit',  '20'],
     ]) {
       await db.execute(
         'INSERT INTO hunter_config (config_key, config_value) VALUES (?,?) ON DUPLICATE KEY UPDATE config_value=config_value',
@@ -748,13 +754,15 @@ app.post('/api/admin/sources', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/sources/:id
 app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
-  const { is_active, prompt_id, use_proxy, name, url, store, category_name } = req.body;
+  const { is_active, prompt_id, use_proxy, adapter_mode, name, url, store, category_name } = req.body;
   if (is_active !== undefined)
     await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
   if (prompt_id !== undefined)
     await db.execute('UPDATE hunter_sources SET prompt_id = ? WHERE id = ?', [prompt_id || null, req.params.id]);
   if (use_proxy !== undefined)
     await db.execute('UPDATE hunter_sources SET use_proxy = ? WHERE id = ?', [use_proxy ? 1 : 0, req.params.id]);
+  if (adapter_mode !== undefined)
+    await db.execute("UPDATE hunter_sources SET adapter_mode = ? WHERE id = ?", [adapter_mode === 'browser' ? 'browser' : 'http', req.params.id]);
   if (name !== undefined || url !== undefined || store !== undefined || category_name !== undefined || use_search !== undefined || search_query !== undefined) {
     const { use_search: us, search_query: sq } = req.body;
     const fields = [], vals = [];
@@ -890,7 +898,7 @@ app.get('/api/admin/openai-config', adminAuth, async (req, res) => {
 
 // POST /api/admin/openai-config
 app.post('/api/admin/openai-config', adminAuth, async (req, res) => {
-  const allowed = ['openai_enabled','openai_model','openai_sites','openai_schedule','openai_timeout','openai_max_retries','openai_prompt'];
+  const allowed = ['openai_enabled','openai_model','openai_sites','openai_schedule','openai_timeout','openai_max_retries','openai_prompt','openai_scoring_prompt','openai_candidate_limit'];
   const entries = Object.entries(req.body).filter(([k]) => allowed.includes(k));
   if (!entries.length) return res.status(400).json({ error: 'no valid keys' });
   for (const [key, value] of entries) {

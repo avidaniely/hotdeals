@@ -1,10 +1,12 @@
 // ============================================================
 //  OpenAI Deals Scheduler
-//  Reads settings from hunter_config (openai_* keys),
-//  calls OpenAI, validates JSON, imports deals directly.
+//  1. Collects candidate deals from hunter_sources (HTTP or Browser)
+//  2. Sends candidates to OpenAI for scoring/ranking
+//  3. Validates JSON output and imports deals directly.
 // ============================================================
 const cron    = require('node-cron');
 const OpenAI  = require('openai');
+const { collectAllSources } = require('./dealCollector');
 
 const EXPECTED_KEYS = ['r','n','p','o','dp','s','u','i'];
 
@@ -14,6 +16,14 @@ async function loadOpenAIConfig(db) {
     "SELECT config_key, config_value FROM hunter_config WHERE config_key LIKE 'openai_%'"
   );
   return Object.fromEntries(rows.map(r => [r.config_key, r.config_value]));
+}
+
+// ── Load enabled sources ──────────────────────────────────────
+async function loadEnabledSources(db) {
+  const [rows] = await db.execute(
+    'SELECT id, name, url, store, use_proxy, adapter_mode FROM hunter_sources WHERE is_active=1'
+  );
+  return rows;
 }
 
 // ── Save a single config key ──────────────────────────────────
@@ -87,6 +97,33 @@ async function importDealsFromPayload(payload, db) {
   return { imported, skipped };
 }
 
+// ── Build scoring prompt ──────────────────────────────────────
+function buildScoringPrompt(template, candidates) {
+  const candidatesJson = JSON.stringify(candidates, null, 2);
+  return template.replace('{{site_candidates_json}}', candidatesJson);
+}
+
+// ── OpenAI call with retry ────────────────────────────────────
+async function callOpenAI(client, model, prompt, maxRetries) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`  🔁 Attempt ${attempt}/${maxRetries} — model: ${model}`);
+      const response = await client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      });
+      return response.choices[0]?.message?.content || '';
+    } catch (e) {
+      lastError = e.message;
+      console.warn(`  ⚠️  Attempt ${attempt} failed: ${e.message}`);
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt));
+    }
+  }
+  throw new Error(`All ${maxRetries} attempts failed. Last error: ${lastError}`);
+}
+
 // ── Main job ──────────────────────────────────────────────────
 async function runOpenAIJob(db, triggeredBy = 'auto') {
   const startTime = Date.now();
@@ -108,53 +145,69 @@ async function runOpenAIJob(db, triggeredBy = 'auto') {
     return { imported: 0, skipped: 0, error: err };
   }
 
-  // Build prompt
-  let sites = [];
-  try { sites = JSON.parse(config.openai_sites || '[]'); } catch { sites = []; }
-  const promptTemplate = config.openai_prompt || '';
-  const finalPrompt = promptTemplate.replace('{{sites}}', sites.join(', '));
+  const model          = config.openai_model          || 'gpt-4o-mini';
+  const timeout        = parseInt(config.openai_timeout)        || 120000;
+  const maxRetries     = parseInt(config.openai_max_retries)    || 3;
+  const candidateLimit = parseInt(config.openai_candidate_limit)|| 20;
 
-  const model      = config.openai_model      || 'gpt-4o-mini';
-  const timeout    = parseInt(config.openai_timeout)     || 60000;
-  const maxRetries = parseInt(config.openai_max_retries) || 3;
+  // Determine prompt mode: use scoring prompt if we have sources; else fall back to legacy prompt
+  const scoringPromptTemplate = config.openai_scoring_prompt || '';
+  const legacyPromptTemplate  = config.openai_prompt         || '';
 
   const client = new OpenAI({ apiKey, timeout });
 
-  let lastError = null;
-  let rawResponse = null;
+  // ── Phase 1: Collect candidates ──────────────────────────────
+  let sources = [];
+  let candidates = {};
 
-  // Retry loop
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  if (scoringPromptTemplate) {
     try {
-      console.log(`  🔁 Attempt ${attempt}/${maxRetries} — model: ${model}`);
-      const response = await client.chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: finalPrompt }],
-        response_format: { type: 'json_object' },
-      });
-
-      rawResponse = response.choices[0]?.message?.content || '';
-      break;
+      sources = await loadEnabledSources(db);
+      console.log(`🌐 Collecting from ${sources.length} source(s)...`);
+      if (sources.length > 0) {
+        candidates = await collectAllSources(sources, candidateLimit);
+        const totalCandidates = Object.values(candidates).reduce((s, a) => s + a.length, 0);
+        console.log(`📦 Collected ${totalCandidates} candidates from ${Object.keys(candidates).length} site(s)`);
+      }
     } catch (e) {
-      lastError = e.message;
-      console.warn(`  ⚠️  Attempt ${attempt} failed: ${e.message}`);
-      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 2000 * attempt));
+      console.warn(`⚠️  Collection phase error: ${e.message} — continuing with empty candidates`);
     }
   }
 
-  if (!rawResponse) {
-    const err = `All ${maxRetries} attempts failed. Last error: ${lastError}`;
+  // ── Phase 2: Build prompt ─────────────────────────────────────
+  let finalPrompt;
+  if (scoringPromptTemplate && Object.keys(candidates).length > 0) {
+    finalPrompt = buildScoringPrompt(scoringPromptTemplate, candidates);
+  } else if (legacyPromptTemplate) {
+    // Legacy mode: send site names, let OpenAI find deals itself
+    let sites = [];
+    try { sites = JSON.parse(config.openai_sites || '[]'); } catch { sites = []; }
+    finalPrompt = legacyPromptTemplate.replace('{{sites}}', sites.join(', '));
+    console.log('📝 Using legacy prompt (no candidates collected)');
+  } else {
+    const err = 'No prompt configured (set openai_scoring_prompt or openai_prompt)';
     await saveConfig(db, 'openai_last_run',    new Date().toISOString());
     await saveConfig(db, 'openai_last_status', 'error');
     await saveConfig(db, 'openai_last_error',  err);
-    await saveConfig(db, 'openai_last_response', '');
     return { imported: 0, skipped: 0, error: err };
+  }
+
+  // ── Phase 3: Call OpenAI ──────────────────────────────────────
+  let rawResponse;
+  try {
+    rawResponse = await callOpenAI(client, model, finalPrompt, maxRetries);
+  } catch (e) {
+    await saveConfig(db, 'openai_last_run',    new Date().toISOString());
+    await saveConfig(db, 'openai_last_status', 'error');
+    await saveConfig(db, 'openai_last_error',  e.message);
+    await saveConfig(db, 'openai_last_response', '');
+    return { imported: 0, skipped: 0, error: e.message };
   }
 
   // Save raw response preview (truncated)
   await saveConfig(db, 'openai_last_response', rawResponse.slice(0, 2000));
 
-  // Parse + validate
+  // ── Phase 4: Parse + validate ─────────────────────────────────
   let payload;
   try {
     payload = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
@@ -168,7 +221,7 @@ async function runOpenAIJob(db, triggeredBy = 'auto') {
     return { imported: 0, skipped: 0, error: err };
   }
 
-  // Import
+  // ── Phase 5: Import ───────────────────────────────────────────
   let result = { imported: 0, skipped: 0 };
   try {
     result = await importDealsFromPayload(payload, db);

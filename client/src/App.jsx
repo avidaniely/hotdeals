@@ -1335,6 +1335,18 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                           background:src.use_proxy?"#e8f0ff":"var(--surface-3)",color:src.use_proxy?"#002A8A":"var(--text-3)" }}>
                         {src.use_proxy ? "🔒 VPN" : "🌍 ישיר"}
                       </button>
+                      <button
+                        onClick={async () => {
+                          const next = (src.adapter_mode || 'http') === 'http' ? 'browser' : 'http';
+                          await hunterAPI.updateSource(src.id, { adapter_mode: next });
+                          setSources(s => s.map(x => x.id === src.id ? { ...x, adapter_mode: next } : x));
+                        }}
+                        title={(src.adapter_mode||'http')==='browser' ? "מצב דפדפן (Playwright) — לחץ למצב HTTP" : "מצב HTTP — לחץ למצב דפדפן (Playwright)"}
+                        style={{ padding:"5px 12px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
+                          background:(src.adapter_mode||'http')==='browser'?"#f3e8ff":"var(--surface-3)",
+                          color:(src.adapter_mode||'http')==='browser'?"#6b21a8":"var(--text-3)" }}>
+                        {(src.adapter_mode||'http')==='browser' ? "🖥️ דפדפן" : "⚡ HTTP"}
+                      </button>
                       <button onClick={() => toggleSearch(src.id, src.use_search)}
                         title={src.use_search ? "מצב חיפוש פעיל — לחץ לכיבוי" : "לחץ להפעלת מצב חיפוש (DuckDuckGo)"}
                         style={{ padding:"5px 12px",fontSize:12,borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,
@@ -1734,13 +1746,15 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                   try {
                     let sitesArr = (oaiCfg._sitesText || '').split('\n').map(s => s.trim()).filter(Boolean);
                     await hunterAPI.saveOpenAIConfig({
-                      openai_enabled:     oaiCfg.openai_enabled,
-                      openai_model:       oaiCfg.openai_model,
-                      openai_sites:       JSON.stringify(sitesArr),
-                      openai_schedule:    oaiCfg.openai_schedule,
-                      openai_timeout:     oaiCfg.openai_timeout,
-                      openai_max_retries: oaiCfg.openai_max_retries,
-                      openai_prompt:      oaiCfg.openai_prompt,
+                      openai_enabled:         oaiCfg.openai_enabled,
+                      openai_model:           oaiCfg.openai_model,
+                      openai_sites:           JSON.stringify(sitesArr),
+                      openai_schedule:        oaiCfg.openai_schedule,
+                      openai_timeout:         oaiCfg.openai_timeout,
+                      openai_max_retries:     oaiCfg.openai_max_retries,
+                      openai_prompt:          oaiCfg.openai_prompt,
+                      openai_scoring_prompt:  oaiCfg.openai_scoring_prompt,
+                      openai_candidate_limit: oaiCfg.openai_candidate_limit,
                     });
                     setOaiSaved(true);
                     setTimeout(() => setOaiSaved(false), 3000);
@@ -1838,13 +1852,31 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                         placeholder={"ksp.co.il\nivory.co.il\nbug.co.il"} />
                     </div>
 
-                    {/* Prompt */}
+                    {/* Scoring Prompt */}
                     <div>
-                      <label style={fieldLabel}>תבנית פרומפט — השתמש ב-{'{{sites}}'} להכנסת רשימת האתרים</label>
+                      <label style={fieldLabel}>🎯 פרומפט דירוג מועמדים — השתמש ב-{'{{site_candidates_json}}'} להכנסת הדאטה שנאספה</label>
+                      <div style={{ fontSize:11,color:"var(--text-3)",marginBottom:6 }}>כשמוגדר, המערכת תאסוף מועמדים מהמקורות הפעילים ותשלח אותם ל-OpenAI לדירוג. ריק = מצב ישן (פרומפט כללי בלבד)</div>
                       <textarea style={{ ...inputStyle,height:220,resize:"vertical",fontFamily:"monospace",fontSize:12 }}
+                        value={oaiCfg.openai_scoring_prompt||''}
+                        onChange={e=>set('openai_scoring_prompt',e.target.value)}
+                        placeholder={'You are a deals scoring AI...\nCandidates: {{site_candidates_json}}\n\nReturn JSON: {"d":"...","k":[...],"sites":{...}}'} />
+                    </div>
+
+                    {/* Candidate limit */}
+                    <div style={{ maxWidth:300 }}>
+                      <label style={fieldLabel}>מקסימום מועמדים לאתר (לפרומפט הדירוג)</label>
+                      <input style={inputStyle} type="number" min="5" max="100"
+                        value={oaiCfg.openai_candidate_limit||'20'}
+                        onChange={e=>set('openai_candidate_limit',e.target.value)} />
+                    </div>
+
+                    {/* Legacy Prompt */}
+                    <details>
+                      <summary style={{ cursor:"pointer",fontSize:13,fontWeight:700,color:"var(--text-2)",padding:"8px 0" }}>📜 פרומפט ישן (מצב ללא איסוף) — השתמש ב-{'{{sites}}'}</summary>
+                      <textarea style={{ ...inputStyle,height:160,resize:"vertical",fontFamily:"monospace",fontSize:12,marginTop:8 }}
                         value={oaiCfg.openai_prompt||''}
                         onChange={e=>set('openai_prompt',e.target.value)} />
-                    </div>
+                    </details>
 
                     {/* Save */}
                     <div style={{ display:"flex",alignItems:"center",gap:12 }}>
