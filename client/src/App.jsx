@@ -314,7 +314,7 @@ export default function App() {
             {/* User area */}
             <div style={{ display:"flex", alignItems:"center", gap:10, marginRight:"auto", flexShrink:0 }}>
               {user?.role === "admin" && (
-                <button type="button" onClick={() => { setAdminOpen(true); loadAdmin(); window.scrollTo(0,0); }} style={{ position:"relative", height:40, padding:"0 14px", borderRadius:999, border:"1px solid var(--border)", background:"#fff", color:"var(--text)", display:"flex", alignItems:"center", gap:8, fontSize:14, fontWeight:500, cursor:"pointer" }}>
+                <button type="button" onClick={() => { setAdminOpen(true); loadAdmin(); window.scrollTo(0,0); }} style={{ position:"relative", height:40, padding:"0 14px", borderRadius:999, border:"1px solid var(--border)", background:"#fff", color:"#111", display:"flex", alignItems:"center", gap:8, fontSize:14, fontWeight:500, cursor:"pointer" }}>
                   <span style={{ fontSize:15 }}>⚙️</span>
                   <span>ניהול</span>
                   {adminStats?.pending > 0 && <span style={{ minWidth:18, height:18, padding:"0 5px", borderRadius:999, background:"var(--danger)", color:"#fff", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{adminStats.pending}</span>}
@@ -325,14 +325,14 @@ export default function App() {
                   <button type="button" onClick={() => setModal("newdeal")} style={{ height:42, padding:"0 18px", borderRadius:999, border:"none", background:"var(--blue)", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 8px 18px rgba(0,56,168,0.16)" }}>שתף דיל</button>
                   <div style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 6px 5px 10px", borderRadius:999, border:"1px solid var(--border)", background:"#fff" }}>
                     <div style={{ width:32, height:32, borderRadius:"50%", background:"var(--surface-3)", color:"var(--blue)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:700, flexShrink:0 }}>{user.avatar}</div>
-                    <span style={{ color:"var(--text)", fontSize:14, fontWeight:500, maxWidth:110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.username}</span>
+                    <span style={{ color:"#111", fontSize:14, fontWeight:500, maxWidth:110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.username}</span>
                     {user.role === "admin" && <span style={{ fontSize:11, color:"var(--blue)", fontWeight:700 }}>מנהל</span>}
                     <button type="button" onClick={logout} style={{ border:"none", background:"transparent", color:"var(--text-2)", fontSize:13, fontWeight:500, cursor:"pointer", padding:0 }}>יציאה</button>
                   </div>
                 </>
               ) : (
                 <>
-                  <button type="button" onClick={() => setModal("login")} style={{ height:40, padding:"0 16px", borderRadius:999, border:"1px solid var(--border)", background:"#fff", color:"var(--text)", fontSize:14, fontWeight:500, cursor:"pointer" }}>כניסה</button>
+                  <button type="button" onClick={() => setModal("login")} style={{ height:40, padding:"0 16px", borderRadius:999, border:"1px solid var(--border)", background:"#fff", color:"#111", fontSize:14, fontWeight:500, cursor:"pointer" }}>כניסה</button>
                   <button type="button" onClick={() => setModal("register")} style={{ height:42, padding:"0 18px", borderRadius:999, border:"none", background:"var(--blue)", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 8px 18px rgba(0,56,168,0.16)" }}>הצטרף</button>
                 </>
               )}
@@ -359,7 +359,7 @@ export default function App() {
                   const active = activeCategory === c;
                   return (
                     <button key={c} type="button" onClick={() => updateParams({ category: c === 'הכל' ? null : c, page: null })}
-                      style={{ height:34, padding:"0 14px", borderRadius:999, border: active ? "1px solid rgba(0,56,168,0.12)" : "1px solid transparent", background: active ? "var(--surface-2)" : "transparent", color: active ? "var(--blue)" : "var(--text-2)", fontSize:14, fontWeight: active ? 700 : 500, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .18s ease", display:"flex", alignItems:"center", gap:5 }}>
+                      style={{ height:34, padding:"0 14px", borderRadius:999, border: active ? "1px solid rgba(0,56,168,0.12)" : "1px solid transparent", background: active ? "var(--surface-2)" : "transparent", color: active ? "var(--blue)" : "#111", fontSize:14, fontWeight: active ? 700 : 500, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .18s ease", display:"flex", alignItems:"center", gap:5 }}>
                       <span style={{ display:"flex", alignItems:"center", opacity:0.7 }}>{catIcons[c] || <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/></svg>}</span>
                       <span>{c}</span>
                     </button>
