@@ -186,8 +186,15 @@ async function collectWithBrowser(source, limit) {
     if (m) {
       const [, ver, user, pass, host, port] = m;
       const authLine = user ? `${user} ${pass}` : '';
+      // Proxychains requires numeric IP for first proxy — resolve hostname
+      let proxyHost = host;
+      try {
+        const dns = require('dns').promises;
+        const addrs = await dns.resolve4(host);
+        if (addrs && addrs[0]) proxyHost = addrs[0];
+      } catch { /* keep hostname, may fail */ }
       fs.writeFileSync(proxychainsConf,
-        `strict_chain\nproxy_dns\n[ProxyList]\nsocks${ver} ${host} ${port} ${authLine}\n`);
+        `strict_chain\nproxy_dns\n[ProxyList]\nsocks${ver} ${proxyHost} ${port} ${authLine}\n`);
       // Create wrapper script
       const wrapper = '/tmp/chromium-proxychains.sh';
       fs.writeFileSync(wrapper, `#!/bin/sh\nexec proxychains4 -f ${proxychainsConf} ${chromiumPath} "$@"\n`);
