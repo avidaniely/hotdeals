@@ -175,9 +175,19 @@ async function collectWithBrowser(source, limit) {
   chromium.use(StealthPlugin());
 
   const proxies = source.use_proxy ? loadProxies() : [];
-  const proxy = proxies.length > 0
-    ? { server: proxies[Math.floor(Math.random() * proxies.length)] }
-    : undefined;
+  let proxy = undefined;
+  if (proxies.length > 0) {
+    const raw = proxies[Math.floor(Math.random() * proxies.length)];
+    // Parse out credentials so special chars in password don't break URL parsing
+    const m = raw.match(/^(socks[45]:\/\/|https?:\/\/)(?:([^:@]+):([^@]+)@)?(.+)$/);
+    if (m) {
+      proxy = { server: m[1] + m[4] };
+      if (m[2]) proxy.username = m[2];
+      if (m[3]) proxy.password = m[3];
+    } else {
+      proxy = { server: raw };
+    }
+  }
 
   const browser = await chromium.launch({
     executablePath: chromiumPath,
