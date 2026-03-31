@@ -205,7 +205,7 @@ async function runOpenAIJob(db, triggeredBy = 'auto') {
   }
 
   // Save raw response preview (truncated)
-  await saveConfig(db, 'openai_last_response', rawResponse.slice(0, 2000));
+  await saveConfig(db, 'openai_last_response', rawResponse.slice(0, 8000));
 
   // ── Phase 4: Parse + validate ─────────────────────────────────
   let payload;

@@ -1817,7 +1817,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                         {oaiCfg.openai_last_response && (
                           <details style={{ marginTop:4 }}>
                             <summary style={{ cursor:"pointer",fontWeight:700,color:"var(--text-2)" }}>תגובה אחרונה (תצוגה מקדימה)</summary>
-                            <pre style={{ fontSize:11,marginTop:6,padding:10,background:"#fff",borderRadius:6,border:"1px solid var(--border)",overflowX:"auto",maxHeight:200,whiteSpace:"pre-wrap",wordBreak:"break-all" }}>{oaiCfg.openai_last_response}</pre>
+                            <pre style={{ fontSize:11,marginTop:6,padding:10,background:"#fff",borderRadius:6,border:"1px solid var(--border)",overflowX:"auto",maxHeight:500,whiteSpace:"pre-wrap",wordBreak:"break-all" }}>{oaiCfg.openai_last_response}</pre>
                           </details>
                         )}
                       </div>
