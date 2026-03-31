@@ -6,9 +6,59 @@
 // ============================================================
 const cron    = require('node-cron');
 const OpenAI  = require('openai');
+const axios   = require('axios');
+const crypto  = require('crypto');
+const fs      = require('fs');
+const path    = require('path');
 const { collectAllSources } = require('./dealCollector');
 
 const EXPECTED_KEYS = ['r','n','p','o','dp','s','u','i'];
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
+// ── Download image to local disk ──────────────────────────────
+async function downloadImage(remoteUrl) {
+  if (!remoteUrl) return null;
+  if (remoteUrl.startsWith('/uploads/')) return remoteUrl; // already local
+
+  try {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+    const response = await axios.get(remoteUrl, {
+      responseType: 'stream',
+      timeout: 15000,
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+
+    // Derive extension from Content-Type or URL
+    const contentType = response.headers['content-type'] || '';
+    let ext = '.jpg';
+    if (contentType.includes('png'))  ext = '.png';
+    else if (contentType.includes('webp')) ext = '.webp';
+    else if (contentType.includes('gif'))  ext = '.gif';
+    else {
+      const urlExt = path.extname(remoteUrl.split('?')[0]).toLowerCase();
+      if (['.jpg','.jpeg','.png','.webp','.gif'].includes(urlExt)) ext = urlExt;
+    }
+
+    const filename = crypto.createHash('md5').update(remoteUrl).digest('hex') + ext;
+    const dest = path.join(UPLOADS_DIR, filename);
+
+    // Skip if already downloaded
+    if (fs.existsSync(dest)) return '/uploads/' + filename;
+
+    await new Promise((resolve, reject) => {
+      const stream = fs.createWriteStream(dest);
+      response.data.pipe(stream);
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    });
+
+    return '/uploads/' + filename;
+  } catch (e) {
+    console.warn(`  ⚠️  Image download failed (${remoteUrl.slice(0, 60)}...): ${e.message}`);
+    return null;
+  }
+}
 
 // ── Load openai_ config keys from DB ─────────────────────────
 async function loadOpenAIConfig(db) {
@@ -83,7 +133,8 @@ async function importDealsFromPayload(payload, db) {
       );
       if (existing) { skipped++; continue; }
 
-      const imageUrl = Array.isArray(images) && images[0] ? images[0] : null;
+      const remoteImageUrl = Array.isArray(images) && images[0] ? images[0] : null;
+      const imageUrl = await downloadImage(remoteImageUrl);
 
       await db.execute(
         `INSERT INTO deals (user_id, category_id, title, description, url, image_url, store, original_price, deal_price, quality_score, is_approved)

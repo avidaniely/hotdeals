@@ -8,6 +8,8 @@ const cors     = require('cors');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const mysql    = require('mysql2/promise');
+const path     = require('path');
+const fs       = require('fs');
 const { startScheduler, runHunter } = require('./agent/dealHunter');
 const { startOpenAIScheduler, runOpenAIJob, importDealsFromPayload } = require('./agent/openaiDealer');
 
@@ -26,6 +28,11 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// ── Static uploads ───────────────────────────────────────────
+const uploadsDir = path.join(__dirname, 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 // ── DB Pool ──────────────────────────────────────────────────
 const db = mysql.createPool({
