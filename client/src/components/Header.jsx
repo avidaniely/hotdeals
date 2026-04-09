@@ -25,95 +25,89 @@ export default function Header({
 }) {
   return (
     <header dir="rtl" className="site-header">
-      <div className="header-inner">
 
-        {/* ── Top row ─────────────────────────────────── */}
-        <div className="header-row">
+      {/* ── Orange top bar ───────────────────────────── */}
+      <div className="header-top">
+        <div className="header-inner">
+          <div className="header-row">
 
-          {/* Logo */}
-          <a href="/" className="header-logo">
-            <img src="/logo.png" alt="hotILdeals" />
-            <span className="header-logo-name">hotILdeals</span>
-          </a>
+            {/* Logo */}
+            <a href="/" className="header-logo">
+              <span className="header-logo-flame">🔥</span>
+              <span className="header-logo-name">hotILdeals</span>
+            </a>
 
-          {/* Search */}
-          <div className="header-search">
-            <div className="search-bar">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
-                <path d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
-                  stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <input
-                placeholder="חפש מותגים, מוצרים, חנויות..."
-                value={search}
-                onChange={e => onSearch(e.target.value)}
-              />
+            {/* Search */}
+            <div className="header-search">
+              <div className="search-bar">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
+                  <path d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
+                    stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <input
+                  placeholder="חפש מותגים, מוצרים, חנויות..."
+                  value={search}
+                  onChange={e => onSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="header-actions">
+              {user?.role === "admin" && (
+                <button type="button" className="header-admin-btn" onClick={onAdmin}>
+                  <span>⚙️</span>
+                  <span>ניהול</span>
+                  {adminStats?.pending > 0 && (
+                    <span className="header-badge">{adminStats.pending}</span>
+                  )}
+                </button>
+              )}
+
+              {user ? (
+                <>
+                  <button type="button" className="btn-post" onClick={() => onModal("newdeal")}>
+                    <span style={{ fontSize:17, lineHeight:1 }}>+</span> שתף דיל
+                  </button>
+                  <div className="user-chip">
+                    <div className="user-avatar">{user.avatar}</div>
+                    <span className="user-chip-name">{user.username}</span>
+                    {user.role === "admin" && <span className="user-chip-role">מנהל</span>}
+                    <button type="button" className="user-chip-logout" onClick={onLogout}>יציאה</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn-login" onClick={() => onModal("login")}>כניסה</button>
+                  <button type="button" className="btn-post" onClick={() => onModal("register")}>הצטרף</button>
+                </>
+              )}
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="header-actions">
-            {user?.role === "admin" && (
-              <button
-                type="button"
-                onClick={onAdmin}
-                style={{ position:"relative", height:34, padding:"0 12px", borderRadius:999, border:"1px solid var(--border)", background:"#fff", color:"#111", display:"flex", alignItems:"center", gap:6, fontSize:13, fontWeight:500, cursor:"pointer" }}
-              >
-                <span>⚙️</span>
-                <span>ניהול</span>
-                {adminStats?.pending > 0 && (
-                  <span style={{ minWidth:16, height:16, padding:"0 4px", borderRadius:999, background:"var(--danger)", color:"#fff", fontSize:10, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>
-                    {adminStats.pending}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {user ? (
-              <>
-                <button type="button" className="btn-post" onClick={() => onModal("newdeal")}>
-                  <span style={{ fontSize:16 }}>+</span> שתף דיל
-                </button>
-                <div className="user-chip">
-                  <div className="user-avatar">{user.avatar}</div>
-                  <span style={{ color:"#111", fontSize:13, fontWeight:500, maxWidth:90, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                    {user.username}
-                  </span>
-                  {user.role === "admin" && (
-                    <span style={{ fontSize:10, color:"var(--brand)", fontWeight:700 }}>מנהל</span>
-                  )}
-                  <button type="button" onClick={onLogout} style={{ border:"none", background:"transparent", color:"var(--text-3)", fontSize:12, fontWeight:500, cursor:"pointer", padding:0 }}>
-                    יציאה
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <button type="button" className="btn-login" onClick={() => onModal("login")}>כניסה</button>
-                <button type="button" className="btn-post" onClick={() => onModal("register")}>הצטרף</button>
-              </>
-            )}
-          </div>
         </div>
-
-        {/* ── Category bar ─────────────────────────────── */}
-        <div className="cat-nav">
-          {["הכל", ...categories.map(c => c.name)].map(c => (
-            <button
-              key={c}
-              type="button"
-              className={`cat-btn${activeCategory === c ? " active" : ""}`}
-              onClick={() => onCategory(c === "הכל" ? null : c)}
-            >
-              <span style={{ display:"flex", alignItems:"center", opacity: activeCategory === c ? 1 : 0.7 }}>
-                {catIcons[c] || <FallbackIcon />}
-              </span>
-              <span>{c}</span>
-            </button>
-          ))}
-        </div>
-
       </div>
+
+      {/* ── White category bar ────────────────────────── */}
+      <div className="header-cat-bar">
+        <div className="header-inner">
+          <nav className="cat-nav">
+            {["הכל", ...categories.map(c => c.name)].map(c => (
+              <button
+                key={c}
+                type="button"
+                className={`cat-btn${activeCategory === c ? " active" : ""}`}
+                onClick={() => onCategory(c === "הכל" ? null : c)}
+              >
+                <span style={{ display:"flex", alignItems:"center", opacity: activeCategory === c ? 1 : 0.65 }}>
+                  {catIcons[c] || <FallbackIcon />}
+                </span>
+                <span>{c}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
     </header>
   );
 }
