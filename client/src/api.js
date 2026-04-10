@@ -3,7 +3,7 @@
 //  Place in:  client/src/api.js
 // ============================================================
 
-const BASE = import.meta.env.VITE_API_URL || '/api';
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // ── Token helpers ────────────────────────────────────────────
 export const getToken  = ()        => localStorage.getItem('hd_token');
