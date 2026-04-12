@@ -722,15 +722,13 @@ app.post('/api/admin/hunt', adminAuth, async (req, res) => {
   }
 });
 
-// POST /api/admin/hunt/:id  — trigger a single source
-app.post('/api/admin/hunt/:id', adminAuth, async (req, res) => {
-  try {
-    const result = await runHunter(db, 'manual', req.params.id);
-    res.json(result);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
-  }
+// POST /api/admin/hunt/:id  — trigger a single source (async, responds immediately)
+app.post('/api/admin/hunt/:id', adminAuth, (req, res) => {
+  const sourceId = req.params.id;
+  // Respond immediately — browser-mode collection can take >60s (Cloudflare tunnel limit)
+  res.json({ started: true, sourceId });
+  // Run in background
+  runHunter(db, 'manual', sourceId).catch(e => console.error('Hunt error:', e.message));
 });
 
 // ════════════════════════════════════════════════════════════
@@ -761,7 +759,7 @@ app.post('/api/admin/sources', adminAuth, async (req, res) => {
 
 // PATCH /api/admin/sources/:id
 app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
-  const { is_active, prompt_id, use_proxy, adapter_mode, name, url, store, category_name } = req.body;
+  const { is_active, prompt_id, use_proxy, adapter_mode, name, url, store, category_name, use_search, search_query } = req.body;
   if (is_active !== undefined)
     await db.execute('UPDATE hunter_sources SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, req.params.id]);
   if (prompt_id !== undefined)
@@ -771,7 +769,7 @@ app.patch('/api/admin/sources/:id', adminAuth, async (req, res) => {
   if (adapter_mode !== undefined)
     await db.execute("UPDATE hunter_sources SET adapter_mode = ? WHERE id = ?", [adapter_mode === 'browser' ? 'browser' : 'http', req.params.id]);
   if (name !== undefined || url !== undefined || store !== undefined || category_name !== undefined || use_search !== undefined || search_query !== undefined) {
-    const { use_search: us, search_query: sq } = req.body;
+    const us = use_search, sq = search_query;
     const fields = [], vals = [];
     if (name          !== undefined) { fields.push('name=?');          vals.push(name); }
     if (url           !== undefined) { fields.push('url=?');           vals.push(url); }

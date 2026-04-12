@@ -1890,7 +1890,7 @@ function AdminPage({ tab, onTab, deals, users, stats, categories, onClose, onUpd
                     <div style={{ borderTop:"2px solid var(--border)",paddingTop:24,marginTop:4 }}>
                       <div style={{ fontWeight:800,fontSize:15,color:"var(--text)",marginBottom:6 }}>📥 ייבוא ידני</div>
                       <div style={{ fontSize:12,color:"var(--text-2)",marginBottom:12 }}>הדבק JSON שקיבלת מסוכן AI חיצוני — ייובא ישירות לתור האישור</div>
-                      <textarea style={{ ...inputStyle,height:320,resize:"vertical",fontFamily:"monospace",fontSize:11,direction:"ltr" }}
+                      <textarea style={{ ...inputStyle,height:600,maxHeight:"70vh",resize:"vertical",fontFamily:"monospace",fontSize:11,direction:"ltr",overflowY:"auto" }}
                         value={importJson} onChange={e=>setImportJson(e.target.value)}
                         placeholder={'{"d":"2026-03-31","k":["r","n","p","o","dp","s","u","i"],"sites":{"ksp.co.il":[[1,"מוצר",999,1299,23,87,"https://...",["https://..."]]]}}'} />
                       <div style={{ display:"flex",alignItems:"center",gap:12,marginTop:10 }}>

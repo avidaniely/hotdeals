@@ -106,9 +106,9 @@ function validatePayload(payload) {
       const price = deal[2];
       if (typeof price !== 'number' || price <= 0)
         throw new Error(`Deal in "${site}" has invalid price: ${price}`);
-      const images = deal[7];
-      if (!Array.isArray(images) || images.length > 3)
-        throw new Error(`Deal in "${site}" images must be array with max 3 items`);
+      if (!Array.isArray(deal[7]))
+        throw new Error(`Deal in "${site}" images must be an array`);
+      if (deal[7].length > 3) deal[7] = deal[7].slice(0, 3);
     }
   }
   return true;
